@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────
+# Datos sensibles y grandes (NUNCA subir)
+# ─────────────────────────────────────────
+data/*.csv
+data/*.xlsx
+data/CASEN/
+data/ENS*/
+data/MINSAL/
+*.csv
+*.parquet
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# ─────────────────────────────────────────
+# Python / Backend
+# ─────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ─────────────────────────────────────────
+# Node.js / Frontend
+# ─────────────────────────────────────────
+node_modules/
+nutricionar/dist/
+nutricionar/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─────────────────────────────────────────
+# IDEs y editores
+# ─────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─────────────────────────────────────────
+# Docker
+# ─────────────────────────────────────────
+docker-compose.override.yml
+
+# ─────────────────────────────────────────
+# Jupyter
+# ─────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─────────────────────────────────────────
+# Logs
+# ─────────────────────────────────────────
+logs/
+*.log

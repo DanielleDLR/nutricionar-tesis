@@ -1,0 +1,33 @@
+/* ===== Design Tokens — Nutricionar ===== */
+:root {
+  --bg:           #FAF7F2;
+  --bg-card:      #FFFFFF;
+  --bg-soft:      #F2EEE5;
+  --bg-dark:      #0E1F26;
+  --bg-darker:    #081418;
+
+  --ink:          #14161A;
+  --ink-soft:     #4A4C50;
+  --ink-mute:     #8A8B8D;
+  --line:         #E2DDD0;
+  --line-strong:  #C9C2B1;
+
+  --accent:       #B8472A;
+  --accent-soft:  #E9C7B6;
+  --teal:         #1F4E58;
+
+  /* Semáforo de riesgo */
+  --critico:      #8B1A1A;
+  --critico-bg:   #F5DDDD;
+  --alto:         #C76123;
+  --alto-bg:      #FAE2D2;
+  --medio:        #D9A847;
+  --medio-bg:     #FAEBC9;
+  --bajo:         #2C5530;
+  --bajo-bg:      #DAE7DA;
+
+  /* Tipografía */
+  --serif:  "Fraunces", ui-serif, Georgia, serif;
+  --sans:   "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --mono:   "JetBrains Mono", ui-monospace, monospace;
+}

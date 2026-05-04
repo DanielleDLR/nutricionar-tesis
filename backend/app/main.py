@@ -1,0 +1,31 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.routers import indicadores, beneficiarios, prediccion
+
+app = FastAPI(
+    title="NutricioNar API",
+    description="API REST para la Plataforma Predictiva de Riesgo de Desnutrición en Adultos Mayores",
+    version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(indicadores.router, prefix="/api/v1/indicadores", tags=["Indicadores"])
+app.include_router(beneficiarios.router, prefix="/api/v1/beneficiarios", tags=["Beneficiarios"])
+app.include_router(prediccion.router, prefix="/api/v1/prediccion", tags=["Predicción ML"])
+
+
+@app.get("/", tags=["Health"])
+def root():
+    return {"status": "ok", "message": "NutricioNar API corriendo"}
+
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {"status": "healthy"}
