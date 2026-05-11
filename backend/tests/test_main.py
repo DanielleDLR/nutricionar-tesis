@@ -63,12 +63,29 @@ def test_prediccion(client):
         "sexo": "F",
         "region": "07",
         "imc": 21.5,
-        "ingreso_hogar": 350000,
+        "ingreso_per_capita": 350000,
         "acceso_pacam": True,
         "vive_solo": False,
     }
     response = client.post("/api/v1/prediccion/", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert data["riesgo"] in ["alto", "medio", "bajo"]
+    assert data["riesgo"] in ["bajo", "medio", "alto", "critico"]
     assert 0.0 <= data["probabilidad"] <= 1.0
+    assert isinstance(data["factores_principales"], list)
+    assert isinstance(data["usa_fallback"], bool)
+
+
+def test_prediccion_campos_requeridos(client):
+    """Falta 'sexo' requerido debe devolver 422."""
+    response = client.post("/api/v1/prediccion/", json={"edad": 70})
+    assert response.status_code == 422
+
+
+def test_prediccion_info(client):
+    response = client.get("/api/v1/prediccion/info")
+    assert response.status_code == 200
+    data = response.json()
+    assert "modelo_disponible" in data
+    assert "n_features" in data
+    assert data["n_features"] == 18

@@ -30,6 +30,10 @@ ENV/
 dist/
 build/
 .pytest_cache/
+pytest-cache-files-*/
+*.db
+*.db-journal
+*.db-wal
 .mypy_cache/
 .ruff_cache/
 htmlcov/
@@ -72,3 +76,9 @@ docker-compose.override.yml
 # ─────────────────────────────────────────
 logs/
 *.log
+
+# ─────────────────────────────────────────
+# ML artefactos (binarios entrenados)
+# ─────────────────────────────────────────
+backend/ml/artefactos/*.pkl
+backend/ml/artefactos/metrics.json
