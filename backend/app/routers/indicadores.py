@@ -10,14 +10,11 @@ router = APIRouter()
 
 @router.get("/")
 def get_indicadores(
-    region: Optional[str] = Query(None, description="Código de región (ej. '07')"),
+    region: Optional[str] = Query(None, description="Codigo de region (ej. '07')"),
     zona: Optional[str] = Query(None, description="'urbano' o 'rural'"),
     db: Session = Depends(get_db),
 ):
-    """
-    Indicadores nutricionales agregados desde la vista resumen regional.
-    Filtrables por región y zona.
-    """
+    """Indicadores nutricionales agregados desde la vista resumen regional."""
     query = "SELECT * FROM vista_resumen_regional WHERE 1=1"
     params = {}
 
@@ -50,5 +47,133 @@ def get_resumen_nacional(db: Session = Depends(get_db)):
         JOIN indicadores_nutricionales i ON i.persona_id = p.id
     """
     result = db.execute(text(sql)).mappings().one_or_none()
+    return dict(result) if result else {
+        "message": "Sin datos aun - carga el dataset primero"
+    }
 
-    return dict(result) if result else {"message": "Sin datos aún — carga el dataset primero"}
+
+@router.get("/stats")
+def get_stats(
+    region: Optional[str] = Query(None, description="Filtrar por region"),
+    db: Session = Depends(get_db),
+):
+    """
+    Distribuciones estadisticas para el StatsPanel del dashboard.
+    Retorna: distribucion_riesgo, distribucion_inseguridad,
+             comorbilidades, distribucion_quintil.
+    """
+    where = "WHERE 1=1"
+    params: dict = {}
+    if region:
+        where += " AND h.region = :region"
+        params["region"] = region
+
+    # Distribucion nivel de riesgo
+    sql_riesgo = f"""
+        SELECT i.nivel_riesgo AS nivel, COUNT(*) AS n
+        FROM hogares h
+        JOIN personas p                  ON p.hogar_id = h.id
+        JOIN indicadores_nutricionales i ON i.persona_id = p.id
+        {where}
+        GROUP BY i.nivel_riesgo
+        ORDER BY CASE i.nivel_riesgo
+            WHEN 'alto' THEN 0 WHEN 'medio' THEN 1 WHEN 'bajo' THEN 2 END
+    """
+    riesgo_rows = db.execute(text(sql_riesgo), params).mappings().all()
+
+    # Distribucion inseguridad alimentaria
+    sql_inseg = f"""
+        SELECT p.nivel_inseguridad AS nivel, COUNT(*) AS n
+        FROM hogares h
+        JOIN personas p ON p.hogar_id = h.id
+        {where}
+        GROUP BY p.nivel_inseguridad
+        ORDER BY CASE p.nivel_inseguridad
+            WHEN 'severo' THEN 0 WHEN 'moderado' THEN 1
+            WHEN 'leve' THEN 2 WHEN 'seguro' THEN 3 END
+    """
+    inseg_rows = db.execute(text(sql_inseg), params).mappings().all()
+
+    # Comorbilidades — columnas reales: tiene_hipertension, tiene_diabetes, tiene_depresion
+    sql_comorb = f"""
+        SELECT
+            SUM(CASE WHEN p.tiene_hipertension THEN 1 ELSE 0 END) AS hipertension,
+            SUM(CASE WHEN p.tiene_diabetes     THEN 1 ELSE 0 END) AS diabetes,
+            SUM(CASE WHEN p.tiene_depresion    THEN 1 ELSE 0 END) AS depresion,
+            COUNT(*) AS total
+        FROM hogares h
+        JOIN personas p ON p.hogar_id = h.id
+        {where}
+    """
+    comorb = db.execute(text(sql_comorb), params).mappings().one_or_none()
+
+    # Distribucion por quintil de ingreso x nivel riesgo
+    sql_quintil = f"""
+        SELECT
+            h.quintil_ingreso AS quintil,
+            i.nivel_riesgo AS riesgo,
+            COUNT(*) AS n
+        FROM hogares h
+        JOIN personas p                  ON p.hogar_id = h.id
+        JOIN indicadores_nutricionales i ON i.persona_id = p.id
+        {where}
+        AND h.quintil_ingreso IS NOT NULL
+        GROUP BY h.quintil_ingreso, i.nivel_riesgo
+        ORDER BY h.quintil_ingreso, i.nivel_riesgo
+    """
+    quintil_rows = db.execute(text(sql_quintil), params).mappings().all()
+
+    # Calcular porcentajes para riesgo
+    total_riesgo = sum(r["n"] for r in riesgo_rows) or 1
+    distribucion_riesgo = [
+        {
+            "nivel": r["nivel"],
+            "n": r["n"],
+            "pct": round(100.0 * r["n"] / total_riesgo, 1),
+        }
+        for r in riesgo_rows
+    ]
+
+    # Calcular porcentajes para inseguridad
+    total_inseg = sum(r["n"] for r in inseg_rows) or 1
+    distribucion_inseguridad = [
+        {
+            "nivel": r["nivel"],
+            "n": r["n"],
+            "pct": round(100.0 * r["n"] / total_inseg, 1),
+        }
+        for r in inseg_rows
+        if r["nivel"] is not None
+    ]
+
+    # Comorbilidades como lista de porcentajes
+    comorbilidades = []
+    if comorb and comorb["total"]:
+        total_c = comorb["total"]
+        for key, label in [
+            ("hipertension", "Hipertension arterial"),
+            ("diabetes",     "Diabetes mellitus"),
+            ("depresion",    "Depresion"),
+        ]:
+            comorbilidades.append({
+                "nombre": label,
+                "n": int(comorb[key] or 0),
+                "pct": round(100.0 * (comorb[key] or 0) / total_c, 1),
+            })
+
+    # Quintil agrupado
+    quintil_dict: dict = {}
+    for r in quintil_rows:
+        q = f"Q{r['quintil']}"
+        if q not in quintil_dict:
+            quintil_dict[q] = {"tramo": q, "total": 0, "por_riesgo": {}}
+        quintil_dict[q]["total"] += r["n"]
+        quintil_dict[q]["por_riesgo"][r["riesgo"]] = r["n"]
+
+    return {
+        "distribucion_riesgo": distribucion_riesgo,
+        "distribucion_inseguridad": distribucion_inseguridad,
+        "comorbilidades": comorbilidades,
+        "distribucion_rsh": list(quintil_dict.values()),
+        "hay_datos": len(riesgo_rows) > 0,
+    }

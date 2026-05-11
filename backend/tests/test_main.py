@@ -89,3 +89,14 @@ def test_prediccion_info(client):
     assert "modelo_disponible" in data
     assert "n_features" in data
     assert data["n_features"] == 18
+
+
+def test_indicadores_stats(client):
+    response = client.get("/api/v1/indicadores/stats")
+    assert response.status_code == 200
+    data = response.json()
+    assert "distribucion_riesgo" in data
+    assert "distribucion_inseguridad" in data
+    assert "comorbilidades" in data
+    assert "hay_datos" in data
+    assert isinstance(data["distribucion_riesgo"], list)

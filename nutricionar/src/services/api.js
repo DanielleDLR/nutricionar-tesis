@@ -8,8 +8,8 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 /**
- * Wrapper genérico con manejo de errores.
- * Retorna { data, error } para que los componentes puedan manejar ambos casos.
+ * Wrapper generico con manejo de errores.
+ * Retorna { data, error } para que los componentes manejen ambos casos.
  */
 async function apiFetch(path, params = {}) {
   const url = new URL(`${BASE_URL}${path}`)
@@ -32,11 +32,31 @@ async function apiFetch(path, params = {}) {
   }
 }
 
-// ─── Indicadores ────────────────────────────────────────────
+async function apiPost(path, body = {}) {
+  const url = `${BASE_URL}${path}`
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}))
+      throw new Error(`HTTP ${res.status}: ${JSON.stringify(errBody)}`)
+    }
+    const data = await res.json()
+    return { data, error: null }
+  } catch (err) {
+    console.warn(`[api] Error posting ${path}:`, err.message)
+    return { data: null, error: err.message }
+  }
+}
+
+// === Indicadores ============================================================
 
 /**
  * GET /api/v1/indicadores/resumen
- * Retorna totales nacionales: total_personas, pct_riesgo_alto, etc.
+ * Totales nacionales: total_adultos_mayores, pct_riesgo_alto, etc.
  */
 export async function getResumen() {
   return apiFetch('/api/v1/indicadores/resumen')
@@ -44,18 +64,27 @@ export async function getResumen() {
 
 /**
  * GET /api/v1/indicadores/
- * Retorna distribución por región/zona.
+ * Distribucion por region/zona.
  * @param {Object} filters - { region?, zona? }
  */
 export async function getIndicadores(filters = {}) {
   return apiFetch('/api/v1/indicadores/', filters)
 }
 
-// ─── Comunas ────────────────────────────────────────────────
+/**
+ * GET /api/v1/indicadores/stats
+ * Distribuciones estadisticas: riesgo, inseguridad, comorbilidades, RSH.
+ * @param {Object} filters - { region? }
+ */
+export async function getStats(filters = {}) {
+  return apiFetch('/api/v1/indicadores/stats', filters)
+}
+
+// === Comunas ================================================================
 
 /**
  * GET /api/v1/comunas/
- * Retorna estadísticas por comuna con filtros opcionales.
+ * Estadisticas por comuna con filtros opcionales.
  * @param {Object} filters - { region_cod?, nivel_riesgo? }
  */
 export async function getComunas(filters = {}) {
@@ -64,18 +93,17 @@ export async function getComunas(filters = {}) {
 
 /**
  * GET /api/v1/comunas/:cod
- * Retorna el detalle de una comuna.
- * @param {string} comunaCod - Código CUT de 5 dígitos (ej: "07101")
+ * Detalle de una comuna.
  */
 export async function getComuna(comunaCod) {
   return apiFetch(`/api/v1/comunas/${comunaCod}`)
 }
 
-// ─── Beneficiarios ──────────────────────────────────────────
+// === Beneficiarios ==========================================================
 
 /**
  * GET /api/v1/beneficiarios/
- * Retorna lista paginada de beneficiarios.
+ * Lista paginada de beneficiarios.
  * @param {Object} filters - { region?, riesgo?, page?, page_size? }
  */
 export async function getBeneficiarios(filters = {}) {
@@ -84,14 +112,33 @@ export async function getBeneficiarios(filters = {}) {
 
 /**
  * GET /api/v1/beneficiarios/:id
- * Retorna el detalle de un beneficiario.
- * @param {number} id
+ * Detalle de un beneficiario.
  */
 export async function getBeneficiario(id) {
   return apiFetch(`/api/v1/beneficiarios/${id}`)
 }
 
-// ─── Health ─────────────────────────────────────────────────
+// === Prediccion ML ==========================================================
+
+/**
+ * POST /api/v1/prediccion/
+ * Predice nivel de riesgo nutricional individual.
+ * @param {Object} record - campos del BeneficiarioInput (ver prediccion.py)
+ * @returns { riesgo, probabilidad, factores_principales, probabilidades, usa_fallback }
+ */
+export async function predictRiesgo(record) {
+  return apiPost('/api/v1/prediccion/', record)
+}
+
+/**
+ * GET /api/v1/prediccion/info
+ * Metadatos del modelo cargado.
+ */
+export async function getModelInfo() {
+  return apiFetch('/api/v1/prediccion/info')
+}
+
+// === Health =================================================================
 
 /**
  * GET /health

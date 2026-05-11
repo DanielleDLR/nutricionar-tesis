@@ -1,33 +1,64 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getStats } from '../../services/api'
 import './StatsPanel.css'
 
-/* ── MNA Distribution ── */
-function MNAPanel() {
+// Datos sinteticos de fallback (calibrados con dataset Maule)
+const MOCK_STATS = {
+  distribucion_riesgo: [
+    { nivel: 'critico', n: 92,  pct: 7.7 },
+    { nivel: 'alto',    n: 363, pct: 30.3 },
+    { nivel: 'medio',   n: 81,  pct: 6.7 },
+    { nivel: 'bajo',    n: 664, pct: 55.3 },
+  ],
+  distribucion_inseguridad: [
+    { nivel: 'seguro',   n: 901, pct: 75.1 },
+    { nivel: 'leve',     n: 158, pct: 13.2 },
+    { nivel: 'moderado', n: 54,  pct: 4.5 },
+    { nivel: 'severo',   n: 87,  pct: 7.2 },
+  ],
+  comorbilidades: [
+    { nombre: 'Hipertension arterial', pct: 60 },
+    { nombre: 'Diabetes mellitus',     pct: 28 },
+    { nombre: 'Depresion',             pct: 19 },
+    { nombre: 'Limitacion fisica',     pct: 27 },
+  ],
+  hay_datos: false,
+}
+
+const RIESGO_COLORS = {
+  critico: 'var(--critico)',
+  alto:    'var(--alto)',
+  medio:   'var(--medio)',
+  bajo:    'var(--bajo)',
+}
+
+/* ── Distribucion Riesgo ── */
+function RiesgoPanel({ data, isMock }) {
+  const total = data.reduce((a, b) => a + b.n, 0) || 1
   return (
     <section className="panel">
       <div className="panel-head">
-        <div className="panel-title">Estado nutricional MNA <small>variable objetivo · ENS 2017</small></div>
-        <div className="panel-actions">
-          <button className="panel-action active">%</button>
-          <button className="panel-action">N</button>
+        <div className="panel-title">
+          Distribución nivel de riesgo
+          <small>modelo RandomForest · dataset piloto</small>
         </div>
+        {isMock && <span className="mock-badge">muestra</span>}
       </div>
       <div className="chart-area">
         <div className="mna-stack">
-          <div className="mna-segment" style={{ background: 'var(--critico)', width: '5.6%' }} />
-          <div className="mna-segment" style={{ background: 'var(--alto)', width: '32.3%' }}>32,3%</div>
-          <div className="mna-segment" style={{ background: 'var(--bajo)', width: '62.1%' }}>62,1%</div>
+          {data.map(d => (
+            <div key={d.nivel} className="mna-segment"
+              style={{ background: RIESGO_COLORS[d.nivel], width: `${d.pct}%` }}>
+              {d.pct >= 10 && `${d.pct}%`}
+            </div>
+          ))}
         </div>
         <div className="mna-legend">
-          {[
-            { pct: '5,6', color: 'var(--critico)', label: 'Desnutrición', desc: '67 personas · MNA 0–7' },
-            { pct: '32,3', color: 'var(--alto)',   label: 'Riesgo',       desc: '388 personas · MNA 8–11' },
-            { pct: '62,1', color: 'var(--bajo)',   label: 'Normal',       desc: '745 personas · MNA 12–14' },
-          ].map(item => (
-            <div key={item.label} className="mna-legend-item" style={{ borderColor: item.color }}>
-              <div className="v">{item.pct}<sup>%</sup></div>
-              <div className="l">{item.label}</div>
-              <div className="desc">{item.desc}</div>
+          {data.map(d => (
+            <div key={d.nivel} className="mna-legend-item" style={{ borderColor: RIESGO_COLORS[d.nivel] }}>
+              <div className="v">{d.pct}<sup>%</sup></div>
+              <div className="l" style={{ textTransform: 'capitalize' }}>{d.nivel}</div>
+              <div className="desc">{d.n.toLocaleString('es-CL')} personas</div>
             </div>
           ))}
         </div>
@@ -36,84 +67,77 @@ function MNAPanel() {
   )
 }
 
-/* ── FIES Distribution ── */
-function FIESPanel() {
+/* ── FIES / Inseguridad ── */
+function InseguridadPanel({ data, isMock }) {
   const [activeFilter, setActiveFilter] = useState('Todos')
-  const rows = [
-    { label: 'Seguro',   pct: 75.1, color: 'var(--bajo)' },
-    { label: 'Leve',     pct: 13.2, color: 'var(--medio)' },
-    { label: 'Moderada', pct: 4.5,  color: 'var(--alto)' },
-    { label: 'Severa',   pct: 7.2,  color: 'var(--critico)' },
-  ]
-  const items = [
-    { label: 'Preocupación por quedarse sin alimentos',   pct: '24,9%' },
-    { label: 'Reducción de variedad por motivos económicos', pct: '21,2%' },
-    { label: 'Salteo de comidas',                          pct: '9,4%' },
-    { label: 'Día completo sin comer',                     pct: '5,4%' },
-  ]
-
   return (
     <section className="panel">
       <div className="panel-head">
-        <div className="panel-title">Inseguridad alimentaria <small>escala FIES · CASEN 2022</small></div>
+        <div className="panel-title">
+          Inseguridad alimentaria
+          <small>escala FIES · CASEN 2022</small>
+        </div>
         <div className="panel-actions">
-          {['Todos','Mujer','Hombre'].map(f => (
-            <button key={f} className={`panel-action ${activeFilter === f ? 'active' : ''}`} onClick={() => setActiveFilter(f)}>{f}</button>
+          {['Todos', 'Mujer', 'Hombre'].map(f => (
+            <button key={f}
+              className={`panel-action ${activeFilter === f ? 'active' : ''}`}
+              onClick={() => setActiveFilter(f)}>{f}</button>
           ))}
         </div>
+        {isMock && <span className="mock-badge">muestra</span>}
       </div>
       <div className="chart-area">
         <div className="fies-list">
-          {rows.map(r => (
-            <div key={r.label} className="fies-row">
+          {data.map(r => (
+            <div key={r.nivel} className="fies-row">
               <span className="fies-lab">
-                <span className="dot" style={{ background: r.color }} />
-                {r.label}
+                <span className="dot" style={{ background: RIESGO_COLORS[
+                  r.nivel === 'severo' ? 'critico' :
+                  r.nivel === 'moderado' ? 'alto' :
+                  r.nivel === 'leve' ? 'medio' : 'bajo'
+                ] }} />
+                <span style={{ textTransform: 'capitalize' }}>{r.nivel}</span>
               </span>
-              <div className="track"><div className="fill" style={{ width: `${r.pct}%`, background: r.color }} /></div>
+              <div className="track">
+                <div className="fill" style={{
+                  width: `${r.pct}%`,
+                  background: RIESGO_COLORS[
+                    r.nivel === 'severo' ? 'critico' :
+                    r.nivel === 'moderado' ? 'alto' :
+                    r.nivel === 'leve' ? 'medio' : 'bajo'
+                  ]
+                }} />
+              </div>
               <span className="fies-pct">{r.pct}%</span>
             </div>
           ))}
         </div>
-        <div className="fies-items">
-          <div className="label-mono" style={{ marginBottom: 8 }}>Ítems FIES más reportados</div>
-          {items.map(it => (
-            <div key={it.label} className="stat-row">
-              <span className="k">{it.label}</span>
-              <span className="v">{it.pct}</span>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   )
 }
 
-/* ── Comorbidities ── */
-function ComorbilidadesPanel() {
-  const list = [
-    { rank: 1, nombre: 'Hipertensión arterial', pct: 60 },
-    { rank: 2, nombre: 'Pérdida dentaria',       pct: 51 },
-    { rank: 3, nombre: 'Dificultad visual',      pct: 52 },
-    { rank: 4, nombre: 'Diabetes mellitus',      pct: 28 },
-    { rank: 5, nombre: 'Limitación física',      pct: 27 },
-    { rank: 6, nombre: 'Osteoporosis',           pct: 25 },
-    { rank: 7, nombre: 'Depresión',              pct: 19 },
-    { rank: 8, nombre: 'Demencia / det. cognitivo', pct: 9 },
-  ]
-
+/* ── Comorbilidades ── */
+function ComorbilidadesPanel({ data, isMock }) {
+  const max = Math.max(...data.map(d => d.pct), 1)
   return (
     <section className="panel">
       <div className="panel-head">
-        <div className="panel-title">Comorbilidades clínicas <small>prevalencia ENS 2017</small></div>
+        <div className="panel-title">
+          Comorbilidades clínicas
+          <small>prevalencia · ENS 2017 / dataset piloto</small>
+        </div>
+        {isMock && <span className="mock-badge">muestra</span>}
       </div>
       <div className="chart-area">
         <div className="comorb-list">
-          {list.map(item => (
-            <div key={item.rank} className="comorb-row">
-              <span className="rank">{item.rank}</span>
+          {data.map((item, i) => (
+            <div key={item.nombre} className="comorb-row">
+              <span className="rank">{i + 1}</span>
               <span className="comorb-name">{item.nombre}</span>
-              <div className="track"><div className="fill" style={{ width: `${item.pct}%` }} /></div>
+              <div className="track">
+                <div className="fill" style={{ width: `${(item.pct / max) * 100}%` }} />
+              </div>
               <span className="comorb-pct">{item.pct}%</span>
             </div>
           ))}
@@ -123,9 +147,9 @@ function ComorbilidadesPanel() {
   )
 }
 
-/* ── PACAM Adherence ── */
+/* ── PACAM (hardcoded — sin fuente BD) ── */
 function PacamPanel() {
-  const circ = 2 * Math.PI * 40 // ~251.3
+  const circ = 2 * Math.PI * 40
   const segments = [
     { pct: 30, color: '#8B1A1A', label: 'Distancia' },
     { pct: 28, color: '#C76123', label: 'Movilidad reducida' },
@@ -133,7 +157,6 @@ function PacamPanel() {
     { pct: 12, color: '#1F4E58', label: 'Calidad percibida' },
     { pct: 8,  color: '#8A8B8D', label: 'Otro' },
   ]
-
   let offset = 0
   const arcs = segments.map(s => {
     const dash = (s.pct / 100) * circ
@@ -141,11 +164,14 @@ function PacamPanel() {
     offset += dash
     return arc
   })
-
   return (
     <section className="panel">
       <div className="panel-head">
-        <div className="panel-title">Adherencia PACAM <small>motivos de no retiro · JUNAEB</small></div>
+        <div className="panel-title">
+          Adherencia PACAM
+          <small>motivos de no retiro · JUNAEB</small>
+        </div>
+        <span className="mock-badge">referencia</span>
       </div>
       <div className="chart-area">
         <div className="pacam-wrap">
@@ -182,45 +208,60 @@ function PacamPanel() {
 }
 
 /* ── RSH Distribution ── */
-function RSHPanel() {
-  const tramos = [
-    { label: 'Tramo A', sub: 'máx. vulnerable', n: 215, pcts: [14, 42, 22, 22] },
-    { label: 'Tramo B', sub: '', n: 261, pcts: [9, 33, 28, 30] },
-    { label: 'Tramo C', sub: '', n: 298, pcts: [5, 25, 30, 40] },
-    { label: 'Tramo D', sub: '', n: 237, pcts: [3, 17, 30, 50] },
-    { label: 'Tramo E', sub: 'mín. vulnerable', n: 189, pcts: [1, 9, 28, 62] },
+function RSHPanel({ rshData, riesgoData, isMock }) {
+  // Usar distribucion de riesgo para construir barras apiladas por nivel
+  const colors = [
+    RIESGO_COLORS.critico,
+    RIESGO_COLORS.alto,
+    RIESGO_COLORS.medio,
+    RIESGO_COLORS.bajo,
   ]
-  const colors = ['var(--critico)', 'var(--alto)', 'var(--medio)', 'var(--bajo)']
-  const maxN = Math.max(...tramos.map(t => t.n))
+
+  // Fallback: tramos sinteticos si no hay datos RSH
+  const tramos = rshData?.length > 0 ? rshData : [
+    { tramo: 'Tramo A', total: 215, por_riesgo: { critico: 14, alto: 42, medio: 22, bajo: 22 } },
+    { tramo: 'Tramo B', total: 261, por_riesgo: { critico: 9,  alto: 33, medio: 28, bajo: 30 } },
+    { tramo: 'Tramo C', total: 298, por_riesgo: { critico: 5,  alto: 25, medio: 30, bajo: 40 } },
+    { tramo: 'Tramo D', total: 237, por_riesgo: { critico: 3,  alto: 17, medio: 30, bajo: 50 } },
+    { tramo: 'Tramo E', total: 189, por_riesgo: { critico: 1,  alto: 9,  medio: 28, bajo: 62 } },
+  ]
+
+  const maxN = Math.max(...tramos.map(t => t.total), 1)
 
   return (
     <section className="panel" style={{ gridColumn: 'span 2' }}>
       <div className="panel-head">
-        <div className="panel-title">Distribución por tramo RSH y nivel de riesgo <small>cruce socioeconómico × nutricional</small></div>
-        <div className="panel-actions">
-          <button className="panel-action active">Apilado</button>
-          <button className="panel-action">Agrupado</button>
+        <div className="panel-title">
+          Distribución por tramo RSH y nivel de riesgo
+          <small>cruce socioeconómico × nutricional</small>
         </div>
+        {isMock && <span className="mock-badge">muestra</span>}
       </div>
       <div className="chart-area">
         <div className="dist-chart">
           {tramos.map(t => {
-            const h = (t.n / maxN) * 200
-            const grad = `linear-gradient(180deg, ${t.pcts.map((p, i) => {
-              const prev = t.pcts.slice(0, i).reduce((a, b) => a + b, 0)
+            const h = (t.total / maxN) * 200
+            const niveles = ['critico', 'alto', 'medio', 'bajo']
+            const pcts = niveles.map(n => {
+              const val = t.por_riesgo?.[n] || 0
+              return typeof val === 'number' && val <= 100 ? val
+                : Math.round((val / t.total) * 100)
+            })
+            const grad = `linear-gradient(180deg, ${pcts.map((p, i) => {
+              const prev = pcts.slice(0, i).reduce((a, b) => a + b, 0)
               return `${colors[i]} ${prev}%, ${colors[i]} ${prev + p}%`
             }).join(', ')})`
             return (
-              <div key={t.label} className="dist-col">
-                <div className="dist-v">{t.n}</div>
+              <div key={t.tramo} className="dist-col">
+                <div className="dist-v">{t.total}</div>
                 <div className="dist-bar" style={{ height: h, background: grad }} />
-                <div className="dist-lab">{t.label}{t.sub && <><br/><span>{t.sub}</span></>}</div>
+                <div className="dist-lab">{t.tramo}</div>
               </div>
             )
           })}
         </div>
         <div className="dist-leyenda">
-          {['Crítico','Alto','Medio','Bajo'].map((l, i) => (
+          {['Crítico', 'Alto', 'Medio', 'Bajo'].map((l, i) => (
             <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--ink-soft)' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: colors[i], display: 'inline-block' }} />
               {l}
@@ -233,14 +274,31 @@ function RSHPanel() {
 }
 
 /* ── Main export ── */
-export default function StatsPanel() {
+export default function StatsPanel({ filters = {} }) {
+  const [stats, setStats] = useState(null)
+  const [isMock, setIsMock] = useState(false)
+
+  useEffect(() => {
+    getStats({ region: filters.region }).then(({ data, error }) => {
+      if (error || !data || !data.hay_datos) {
+        setStats(MOCK_STATS)
+        setIsMock(true)
+      } else {
+        setStats(data)
+        setIsMock(false)
+      }
+    })
+  }, [filters.region])
+
+  const s = stats || MOCK_STATS
+
   return (
     <div className="stats-grid">
-      <MNAPanel />
-      <FIESPanel />
-      <ComorbilidadesPanel />
+      <RiesgoPanel      data={s.distribucion_riesgo}      isMock={isMock} />
+      <InseguridadPanel data={s.distribucion_inseguridad} isMock={isMock} />
+      <ComorbilidadesPanel data={s.comorbilidades}        isMock={isMock} />
       <PacamPanel />
-      <RSHPanel />
+      <RSHPanel rshData={s.distribucion_rsh} riesgoData={s.distribucion_riesgo} isMock={isMock} />
     </div>
   )
 }
