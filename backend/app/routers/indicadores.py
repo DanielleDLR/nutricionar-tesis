@@ -222,9 +222,18 @@ def get_tendencias(
             {
                 "mes": r["mes"],
                 "total": r["total"],
-                "pct_riesgo_alto": round(100.0 * r["riesgo_alto"] / r["total"], 1) if r["total"] else 0,
-                "pct_riesgo_medio": round(100.0 * r["riesgo_medio"] / r["total"], 1) if r["total"] else 0,
-                "pct_inseg_moderada_severa": round(100.0 * r["inseg_moderada_severa"] / r["total"], 1) if r["total"] else 0,
+                "pct_riesgo_alto": (
+                    round(100.0 * r["riesgo_alto"] / r["total"], 1)
+                    if r["total"] else 0
+                ),
+                "pct_riesgo_medio": (
+                    round(100.0 * r["riesgo_medio"] / r["total"], 1)
+                    if r["total"] else 0
+                ),
+                "pct_inseg_moderada_severa": (
+                    round(100.0 * r["inseg_moderada_severa"] / r["total"], 1)
+                    if r["total"] else 0
+                ),
             }
             for r in reversed(list(rows))
         ]
