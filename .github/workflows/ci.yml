@@ -60,7 +60,7 @@ jobs:
 
       - name: Instalar dependencias
         working-directory: nutricionar
-        run: npm ci
+        run: npm install
 
       - name: Build de producción
         working-directory: nutricionar

@@ -4,7 +4,7 @@ from app.routers import indicadores, beneficiarios, prediccion
 
 app = FastAPI(
     title="NutricioNar API",
-    description="API REST para la Plataforma Predictiva de Riesgo de Desnutrición en Adultos Mayores",
+    description="API REST — Plataforma Predictiva de Riesgo de Desnutrición en Adultos Mayores",
     version="0.1.0",
 )
 

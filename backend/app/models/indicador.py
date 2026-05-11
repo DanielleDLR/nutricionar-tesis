@@ -15,7 +15,8 @@ class IndicadorNutricional(Base):
     probabilidad_riesgo = Column(Float, nullable=True)           # 0.0 - 1.0
 
     # Indicadores calculados
-    estado_nutricional = Column(String(20), nullable=True)       # "normal" / "bajo peso" / "obesidad"
+    # "normal" / "bajo peso" / "obesidad"
+    estado_nutricional = Column(String(20), nullable=True)
     riesgo_sarcopenia = Column(String(10), nullable=True)        # "si" / "no" / "probable"
     riesgo_desnutricion = Column(String(10), nullable=True)      # "si" / "no" / "probable"
 

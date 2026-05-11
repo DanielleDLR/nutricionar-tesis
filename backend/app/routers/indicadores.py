@@ -35,15 +35,20 @@ def get_indicadores(
 @router.get("/resumen")
 def get_resumen_nacional(db: Session = Depends(get_db)):
     """Totales nacionales de indicadores nutricionales."""
-    result = db.execute(text("""
+    sql = """
         SELECT
-            COUNT(DISTINCT p.id)                                                          AS total_adultos_mayores,
-            ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'alto'  THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_riesgo_alto,
-            ROUND(100.0 * SUM(CASE WHEN h.acceso_pacam = TRUE     THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_beneficiarios_pacam,
-            ROUND(100.0 * SUM(CASE WHEN p.nivel_inseguridad IN ('moderado','severo') THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_inseguridad_alimentaria
+            COUNT(DISTINCT p.id) AS total_adultos_mayores,
+            ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'alto'
+                THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_riesgo_alto,
+            ROUND(100.0 * SUM(CASE WHEN h.acceso_pacam = TRUE
+                THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_beneficiarios_pacam,
+            ROUND(100.0 * SUM(CASE WHEN p.nivel_inseguridad
+                IN ('moderado','severo')
+                THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_inseguridad_alimentaria
         FROM hogares h
         JOIN personas p                  ON p.hogar_id = h.id
         JOIN indicadores_nutricionales i ON i.persona_id = p.id
-    """)).mappings().one_or_none()
+    """
+    result = db.execute(text(sql)).mappings().one_or_none()
 
     return dict(result) if result else {"message": "Sin datos aún — carga el dataset primero"}
