@@ -1,69 +1,128 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './FilterSidebar.css'
 
-const grupos = ['65–74', '75–84', '85+']
-const sexos  = ['Mujer', 'Hombre']
-const indicadores = [
+const gruposOpts = ['65–74', '75–84', '85+']
+const sexosOpts  = ['Mujer', 'Hombre']
+const indicadoresOpts = [
   { label: 'Riesgo compuesto',        hint: 'ML' },
   { label: 'Categoría MNA',           hint: 'ENS' },
   { label: 'Inseguridad alim. (FIES)',hint: 'CASEN' },
   { label: 'Adherencia PACAM',        hint: 'JUNAEB' },
   { label: 'IMC',                     hint: 'ENS' },
 ]
-const riesgos = [
-  { label: 'Crítico', cls: 'critico' },
-  { label: 'Alto',    cls: 'alto' },
-  { label: 'Medio',   cls: 'medio' },
-  { label: 'Bajo',    cls: 'bajo' },
+const riesgosOpts = [
+  { label: 'Crítico', cls: 'critico', api: 'critico' },
+  { label: 'Alto',    cls: 'alto',    api: 'alto' },
+  { label: 'Medio',   cls: 'medio',   api: 'medio' },
+  { label: 'Bajo',    cls: 'bajo',    api: 'bajo' },
 ]
-const pacam = ['Solo beneficiarios', 'No-retiradores', 'Sin cobertura']
+const pacamOpts = ['Solo beneficiarios', 'No-retiradores', 'Sin cobertura']
+
+const DEFAULT_STATE = {
+  region:     '07',
+  comuna:     '',
+  grupos:     new Set(['65–74','75–84','85+']),
+  sexos:      new Set(['Mujer','Hombre']),
+  riesgos:    new Set(['Crítico','Alto']),
+  pacam:      new Set(['No-retiradores']),
+  indicador:  0,
+}
+
+/**
+ * Serializa el estado interno en un objeto plano para que el padre pueda
+ * pasárselo a la API sin conocer Sets ni detalles del componente.
+ */
+function toApiFilters(state) {
+  return {
+    region:      state.region,
+    comuna:      state.comuna || undefined,
+    // nivel_riesgo: si solo hay un valor activo se envía, si son todos vacío
+    nivelRiesgo: state.riesgos.size === 1
+      ? riesgosOpts.find(r => state.riesgos.has(r.label))?.api
+      : undefined,
+    sexos:       [...state.sexos].map(s => s === 'Mujer' ? 'F' : 'M'),
+    grupos:      [...state.grupos],
+    indicador:   indicadoresOpts[state.indicador]?.label,
+  }
+}
 
 export default function FilterSidebar({ onFiltersChange }) {
-  const [activeGrupos,  setActiveGrupos]  = useState(new Set(['65–74','75–84','85+']))
-  const [activeSexos,   setActiveSexos]   = useState(new Set(['Mujer','Hombre']))
-  const [activeRiesgos, setActiveRiesgos] = useState(new Set(['Crítico','Alto']))
-  const [activePacam,   setActivePacam]   = useState(new Set(['No-retiradores']))
-  const [indicador,     setIndicador]     = useState(0)
+  const [state, setState] = useState(DEFAULT_STATE)
 
-  function toggle(set, setter, val) {
-    const next = new Set(set)
-    next.has(val) ? next.delete(val) : next.add(val)
-    setter(next)
+  // Notifica al padre cada vez que cambia cualquier filtro
+  useEffect(() => {
+    onFiltersChange?.(toApiFilters(state))
+  }, [state]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggle(key, val) {
+    setState(prev => {
+      const next = new Set(prev[key])
+      next.has(val) ? next.delete(val) : next.add(val)
+      return { ...prev, [key]: next }
+    })
+  }
+
+  function set(key, val) {
+    setState(prev => ({ ...prev, [key]: val }))
   }
 
   function reset() {
-    setActiveGrupos(new Set(['65–74','75–84','85+']))
-    setActiveSexos(new Set(['Mujer','Hombre']))
-    setActiveRiesgos(new Set(['Crítico','Alto']))
-    setActivePacam(new Set(['No-retiradores']))
-    setIndicador(0)
+    setState(DEFAULT_STATE)
   }
+
+  const activeCount = [
+    state.grupos.size  < gruposOpts.length,
+    state.sexos.size   < sexosOpts.length,
+    state.riesgos.size < riesgosOpts.length,
+    state.pacam.size   > 0,
+    state.comuna       !== '',
+  ].filter(Boolean).length
 
   return (
     <aside className="filters">
       <div className="filters-header">
-        <h3>Filtros</h3>
+        <h3>
+          Filtros
+          {activeCount > 0 && (
+            <span className="filter-badge">{activeCount}</span>
+          )}
+        </h3>
         <button className="reset-btn" onClick={reset}>↺ limpiar</button>
       </div>
 
       {/* Región */}
       <div className="filter-group">
         <label>Región</label>
-        <select className="f-select">
-          <option>Maule (07) — Piloto</option>
-          <option disabled>Metropolitana (próx.)</option>
-          <option disabled>Biobío (próx.)</option>
+        <select
+          className="f-select"
+          value={state.region}
+          onChange={e => set('region', e.target.value)}
+        >
+          <option value="07">Maule (07) — Piloto</option>
+          <option disabled value="">Metropolitana (próx.)</option>
+          <option disabled value="">Biobío (próx.)</option>
         </select>
       </div>
 
       {/* Comuna */}
       <div className="filter-group">
         <label>Comuna</label>
-        <select className="f-select">
-          <option>Todas las comunas (30)</option>
-          <option>Talca</option><option>Curicó</option>
-          <option>Linares</option><option>Constitución</option>
-          <option>Cauquenes</option>
+        <select
+          className="f-select"
+          value={state.comuna}
+          onChange={e => set('comuna', e.target.value)}
+        >
+          <option value="">Todas las comunas (30)</option>
+          <option value="07101">Talca</option>
+          <option value="07301">Curicó</option>
+          <option value="07401">Linares</option>
+          <option value="07102">Constitución</option>
+          <option value="07201">Cauquenes</option>
+          <option value="07304">Molina</option>
+          <option value="07103">Curepto</option>
+          <option value="07104">Empedrado</option>
+          <option value="07302">Hualañé</option>
+          <option value="07404">Parral</option>
         </select>
       </div>
 
@@ -71,11 +130,11 @@ export default function FilterSidebar({ onFiltersChange }) {
       <div className="filter-group">
         <label>Grupo etario</label>
         <div className="chips">
-          {grupos.map(g => (
+          {gruposOpts.map(g => (
             <span
               key={g}
-              className={`chip ${activeGrupos.has(g) ? 'active' : ''}`}
-              onClick={() => toggle(activeGrupos, setActiveGrupos, g)}
+              className={`chip ${state.grupos.has(g) ? 'active' : ''}`}
+              onClick={() => toggle('grupos', g)}
             >{g}</span>
           ))}
         </div>
@@ -85,11 +144,11 @@ export default function FilterSidebar({ onFiltersChange }) {
       <div className="filter-group">
         <label>Sexo</label>
         <div className="chips">
-          {sexos.map(s => (
+          {sexosOpts.map(s => (
             <span
               key={s}
-              className={`chip ${activeSexos.has(s) ? 'active' : ''}`}
-              onClick={() => toggle(activeSexos, setActiveSexos, s)}
+              className={`chip ${state.sexos.has(s) ? 'active' : ''}`}
+              onClick={() => toggle('sexos', s)}
             >{s}</span>
           ))}
         </div>
@@ -99,11 +158,11 @@ export default function FilterSidebar({ onFiltersChange }) {
       <div className="filter-group">
         <label>Indicador a visualizar</label>
         <div className="radio-group">
-          {indicadores.map((ind, i) => (
+          {indicadoresOpts.map((ind, i) => (
             <div
               key={i}
-              className={`radio-row ${indicador === i ? 'active' : ''}`}
-              onClick={() => setIndicador(i)}
+              className={`radio-row ${state.indicador === i ? 'active' : ''}`}
+              onClick={() => set('indicador', i)}
             >
               <span className="radio-dot"></span>
               <span>{ind.label}</span>
@@ -117,11 +176,11 @@ export default function FilterSidebar({ onFiltersChange }) {
       <div className="filter-group">
         <label>Nivel de riesgo</label>
         <div className="chips">
-          {riesgos.map(r => (
+          {riesgosOpts.map(r => (
             <span
               key={r.label}
-              className={`chip risk-chip ${r.cls} ${activeRiesgos.has(r.label) ? 'active' : ''}`}
-              onClick={() => toggle(activeRiesgos, setActiveRiesgos, r.label)}
+              className={`chip risk-chip ${r.cls} ${state.riesgos.has(r.label) ? 'active' : ''}`}
+              onClick={() => toggle('riesgos', r.label)}
             >{r.label}</span>
           ))}
         </div>
@@ -131,19 +190,20 @@ export default function FilterSidebar({ onFiltersChange }) {
       <div className="filter-group">
         <label>Beneficio PACAM</label>
         <div className="chips">
-          {pacam.map(p => (
+          {pacamOpts.map(p => (
             <span
               key={p}
-              className={`chip ${activePacam.has(p) ? 'active' : ''}`}
-              onClick={() => toggle(activePacam, setActivePacam, p)}
+              className={`chip ${state.pacam.has(p) ? 'active' : ''}`}
+              onClick={() => toggle('pacam', p)}
             >{p}</span>
           ))}
         </div>
       </div>
 
       <div className="applied-summary">
-        Mostrando <strong>456</strong> de 1.200 personas<br/>
-        en <strong>17</strong> comunas
+        Región <strong>Maule</strong>{state.comuna && ` · ${state.comuna}`}
+        <br/>
+        {state.riesgos.size} nivel(es) de riesgo activos
       </div>
     </aside>
   )

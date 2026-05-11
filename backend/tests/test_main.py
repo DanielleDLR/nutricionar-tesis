@@ -43,6 +43,20 @@ def test_beneficiario_no_encontrado(client):
     assert response.status_code == 404
 
 
+def test_comunas_retorna_estructura(client):
+    response = client.get("/api/v1/comunas/")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total" in data
+    assert "comunas" in data
+    assert isinstance(data["comunas"], list)
+
+
+def test_comuna_no_encontrada(client):
+    response = client.get("/api/v1/comunas/99999")
+    assert response.status_code == 404
+
+
 def test_prediccion(client):
     payload = {
         "edad": 72,

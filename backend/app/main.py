@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import indicadores, beneficiarios, prediccion
+from app.routers import indicadores, beneficiarios, prediccion, comunas
 
 app = FastAPI(
     title="NutricioNar API",
@@ -19,6 +19,7 @@ app.add_middleware(
 app.include_router(indicadores.router, prefix="/api/v1/indicadores", tags=["Indicadores"])
 app.include_router(beneficiarios.router, prefix="/api/v1/beneficiarios", tags=["Beneficiarios"])
 app.include_router(prediccion.router, prefix="/api/v1/prediccion", tags=["Predicción ML"])
+app.include_router(comunas.router, prefix="/api/v1/comunas", tags=["Comunas"])
 
 
 @app.get("/", tags=["Health"])

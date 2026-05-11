@@ -85,6 +85,33 @@ CREATE INDEX IF NOT EXISTS idx_indicadores_persona_id   ON indicadores_nutricion
 CREATE INDEX IF NOT EXISTS idx_indicadores_nivel_riesgo ON indicadores_nutricionales(nivel_riesgo);
 
 -- ────────────────────────────────────────────────────────────
+-- TABLA: comunas_resumen
+-- Resumen estadístico precalculado por comuna (Región del Maule)
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS comunas_resumen (
+    id                      SERIAL PRIMARY KEY,
+    comuna_cod              CHAR(5)         NOT NULL UNIQUE,
+    comuna_nombre           VARCHAR(100)    NOT NULL,
+    region_cod              CHAR(2)         NOT NULL,
+    total_personas          INTEGER         DEFAULT 0,
+    n_desnutricion          INTEGER         DEFAULT 0,
+    n_riesgo                INTEGER         DEFAULT 0,
+    n_normal                INTEGER         DEFAULT 0,
+    pct_desnutricion        NUMERIC(5,2)    DEFAULT 0.0,
+    pct_riesgo_mna          NUMERIC(5,2)    DEFAULT 0.0,
+    pct_inseg_severa        NUMERIC(5,2)    DEFAULT 0.0,
+    pct_inseg_mod_sev       NUMERIC(5,2)    DEFAULT 0.0,
+    n_benef_pacam           INTEGER         DEFAULT 0,
+    pct_no_retiro_pacam     NUMERIC(5,2)    DEFAULT 0.0,
+    n_critico               INTEGER         DEFAULT 0,
+    n_alto                  INTEGER         DEFAULT 0,
+    pct_riesgo_alto_crit    NUMERIC(5,2)    DEFAULT 0.0,
+    nivel_riesgo_zona       VARCHAR(20)
+);
+
+CREATE INDEX IF NOT EXISTS idx_comunas_region_cod ON comunas_resumen(region_cod);
+
+-- ────────────────────────────────────────────────────────────
 -- VISTA: resumen por región (útil para el dashboard)
 -- ────────────────────────────────────────────────────────────
 CREATE OR REPLACE VIEW vista_resumen_regional AS

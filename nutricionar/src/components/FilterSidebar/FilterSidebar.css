@@ -16,6 +16,22 @@
   margin-bottom: 18px;
 }
 
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
 .filters-header h3 {
   font-family: var(--serif);
   font-weight: 500;

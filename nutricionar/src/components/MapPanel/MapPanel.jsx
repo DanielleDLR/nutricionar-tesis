@@ -1,16 +1,82 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { COMUNAS_MAULE, RISK_COLORS } from '../../data/mockData'
+import { getComunas } from '../../services/api'
 import './MapPanel.css'
 
-export default function MapPanel() {
-  const mapRef = useRef(null)
-  const mapInstanceRef = useRef(null)
-  const [selected, setSelected] = useState(COMUNAS_MAULE[0])
-  const [mapType, setMapType] = useState('burbujas')
+/** Índice estático lat/lon por código CUT (la API no almacena coordenadas) */
+const COORDS = Object.fromEntries(
+  COMUNAS_MAULE.map(c => [c.cod, { lat: c.lat, lon: c.lon, nombre: c.nombre }])
+)
 
+/** Fusiona datos de la API con coordenadas estáticas */
+function mergeWithCoords(apiComunas) {
+  return apiComunas
+    .map(c => {
+      const geo = COORDS[c.comuna_cod]
+      if (!geo) return null
+      return {
+        cod:    c.comuna_cod,
+        nombre: c.comuna_nombre || geo.nombre,
+        lat:    geo.lat,
+        lon:    geo.lon,
+        n:      c.total_personas,
+        pct:    c.pct_riesgo_alto_crit,
+        nivel:  c.nivel_riesgo_zona || 'bajo',
+        data:   c,   // objeto completo para el panel lateral
+      }
+    })
+    .filter(Boolean)
+}
+
+export default function MapPanel({ filters = {} }) {
+  const mapRef         = useRef(null)
+  const mapInstanceRef = useRef(null)
+  const layerGroupRef  = useRef(null)
+
+  const [selected, setSelected]   = useState(null)
+  const [comunas,  setComunas]    = useState([])
+  const [loading,  setLoading]    = useState(true)
+  const [apiOk,    setApiOk]      = useState(false)
+  const [mapType,  setMapType]    = useState('burbujas')
+
+  // Carga datos comunales desde la API (con fallback a mockData)
+  const loadComunas = useCallback(async () => {
+    setLoading(true)
+    const params = {}
+    if (filters.region)     params.region_cod   = filters.region
+    if (filters.nivelRiesgo) params.nivel_riesgo = filters.nivelRiesgo
+
+    const { data, error } = await getComunas(params)
+
+    if (data && !error && data.comunas?.length > 0) {
+      const merged = mergeWithCoords(data.comunas)
+      setComunas(merged)
+      setSelected(merged[0] ?? null)
+      setApiOk(true)
+    } else {
+      // Fallback a mockData
+      const fallback = COMUNAS_MAULE.map(c => ({
+        cod:    c.cod,
+        nombre: c.nombre,
+        lat:    c.lat,
+        lon:    c.lon,
+        n:      c.n,
+        pct:    c.pct,
+        nivel:  c.nivel,
+        data:   null,
+      }))
+      setComunas(fallback)
+      setSelected(fallback[0])
+      setApiOk(false)
+    }
+    setLoading(false)
+  }, [filters.region, filters.nivelRiesgo])
+
+  useEffect(() => { loadComunas() }, [loadComunas])
+
+  // Inicializar el mapa Leaflet (solo una vez)
   useEffect(() => {
-    if (mapInstanceRef.current) return
-    if (!window.L) return
+    if (mapInstanceRef.current || !window.L || !mapRef.current) return
 
     const L = window.L
     const map = L.map(mapRef.current, {
@@ -26,23 +92,37 @@ export default function MapPanel() {
       maxZoom: 18, subdomains: 'abcd',
     }).addTo(map)
 
-    COMUNAS_MAULE.forEach(c => {
+    layerGroupRef.current = L.layerGroup().addTo(map)
+    mapInstanceRef.current = map
+  }, [])
+
+  // Redibujar marcadores cuando cambian las comunas
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.L || comunas.length === 0) return
+
+    const L = window.L
+    layerGroupRef.current.clearLayers()
+
+    comunas.forEach(c => {
       const radius = Math.sqrt(c.n) * 1.2 + 4
       const marker = L.circleMarker([c.lat, c.lon], {
         radius,
-        fillColor: RISK_COLORS[c.nivel],
-        color: 'white',
-        weight: 2,
-        opacity: 1,
+        fillColor: RISK_COLORS[c.nivel] ?? RISK_COLORS.bajo,
+        color:       'white',
+        weight:      2,
+        opacity:     1,
         fillOpacity: 0.78,
-      }).addTo(map)
+      })
 
       marker.on('click', () => setSelected(c))
-      marker.bindTooltip(`<strong>${c.nombre}</strong><br/>${c.pct}% riesgo`)
+      marker.bindTooltip(
+        `<strong>${c.nombre}</strong><br/>${c.pct?.toFixed(1) ?? c.pct}% riesgo`
+      )
+      layerGroupRef.current.addLayer(marker)
     })
+  }, [comunas])
 
-    mapInstanceRef.current = map
-  }, [])
+  const sel = selected
 
   return (
     <section className="panel map-panel">
@@ -50,6 +130,9 @@ export default function MapPanel() {
         <div className="panel-title">
           Mapa de zonas vulnerables{' '}
           <small>nivel comunal · Maule</small>
+          {!loading && !apiOk && (
+            <span className="data-source-badge">datos de muestra</span>
+          )}
         </div>
         <div className="panel-actions">
           {['Coroplético','Burbujas','Calor'].map(t => (
@@ -67,21 +150,67 @@ export default function MapPanel() {
         <div ref={mapRef} className="leaflet-map" />
 
         <aside className="map-side">
-          {/* Detalle de la comuna seleccionada */}
-          <div className="detail-card">
-            <div className="selected-name">{selected.nombre}</div>
-            <div className="selected-cut">CUT {selected.cod}</div>
-            <div className={`selected-risk ${selected.nivel}`}>
-              ● riesgo {selected.nivel} · {selected.pct}%
-            </div>
-          </div>
+          {sel ? (
+            <>
+              {/* Detalle de la comuna seleccionada */}
+              <div className="detail-card">
+                <div className="selected-name">{sel.nombre}</div>
+                <div className="selected-cut">CUT {sel.cod}</div>
+                <div className={`selected-risk ${sel.nivel}`}>
+                  ● riesgo {sel.nivel} · {
+                    typeof sel.pct === 'number'
+                      ? sel.pct.toFixed(1)
+                      : sel.pct
+                  }%
+                </div>
+              </div>
 
-          <div className="stat-row"><span className="k">Adultos mayores</span><span className="v">{selected.n}</span></div>
-          <div className="stat-row"><span className="k">Riesgo desnutrición</span><span className="v">{selected.pct}%</span></div>
-          <div className="stat-row"><span className="k">Desnutrición est.</span><span className="v">4,5%</span></div>
-          <div className="stat-row"><span className="k">Inseg. alim. severa</span><span className="v">5,7%</span></div>
-          <div className="stat-row"><span className="k">Beneficiarios PACAM</span><span className="v">158 (60%)</span></div>
-          <div className="stat-row"><span className="k">No retiran PACAM</span><span className="v">94 (59%)</span></div>
+              <div className="stat-row">
+                <span className="k">Adultos mayores</span>
+                <span className="v">{sel.n?.toLocaleString('es-CL') ?? '—'}</span>
+              </div>
+              <div className="stat-row">
+                <span className="k">Riesgo alto/crítico</span>
+                <span className="v">{typeof sel.pct === 'number' ? sel.pct.toFixed(1) : sel.pct}%</span>
+              </div>
+              <div className="stat-row">
+                <span className="k">Desnutrición estab.</span>
+                <span className="v">
+                  {sel.data
+                    ? `${sel.data.pct_desnutricion?.toFixed(1) ?? '—'}%`
+                    : '4,5%'}
+                </span>
+              </div>
+              <div className="stat-row">
+                <span className="k">Inseg. alim. severa</span>
+                <span className="v">
+                  {sel.data
+                    ? `${sel.data.pct_inseg_severa?.toFixed(1) ?? '—'}%`
+                    : '5,7%'}
+                </span>
+              </div>
+              <div className="stat-row">
+                <span className="k">Beneficiarios PACAM</span>
+                <span className="v">
+                  {sel.data
+                    ? `${sel.data.n_benef_pacam ?? '—'}`
+                    : '158'}
+                </span>
+              </div>
+              <div className="stat-row">
+                <span className="k">No retiran PACAM</span>
+                <span className="v">
+                  {sel.data
+                    ? `${sel.data.pct_no_retiro_pacam?.toFixed(1) ?? '—'}%`
+                    : '59%'}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="detail-card">
+              <div className="selected-name">Selecciona una comuna</div>
+            </div>
+          )}
 
           <div className="factors-list">
             <h5>Factores de riesgo principales</h5>
@@ -105,10 +234,10 @@ export default function MapPanel() {
           <h4 style={{ marginTop: 24 }}>Leyenda: nivel de riesgo</h4>
           <div className="legend">
             {[
-              { label: 'Crítico', range: '≥ 35%', color: 'var(--critico)' },
-              { label: 'Alto',    range: '25–35%', color: 'var(--alto)' },
-              { label: 'Medio',   range: '15–25%', color: 'var(--medio)' },
-              { label: 'Bajo',    range: '< 15%',  color: 'var(--bajo)' },
+              { label: 'Crítico', range: '≥ 40%', color: 'var(--critico)' },
+              { label: 'Alto',    range: '25–40%', color: 'var(--alto)' },
+              { label: 'Medio',   range: '10–25%', color: 'var(--medio)' },
+              { label: 'Bajo',    range: '< 10%',  color: 'var(--bajo)' },
             ].map(l => (
               <div key={l.label} className="legend-item">
                 <div className="legend-swatch" style={{ background: l.color }} />

@@ -1,5 +1,18 @@
 .map-panel { margin-bottom: 18px; }
 
+.data-source-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--ink-mute);
+  background: var(--line);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 .panel {
   background: var(--bg-card);
   border: 1px solid var(--line);
