@@ -90,4 +90,4 @@ def detalle_comuna(
             detail=f"Comuna con código '{comuna_cod}' no encontrada"
         )
 
-   
+    return comuna
