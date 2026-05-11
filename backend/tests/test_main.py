@@ -100,3 +100,39 @@ def test_indicadores_stats(client):
     assert "comorbilidades" in data
     assert "hay_datos" in data
     assert isinstance(data["distribucion_riesgo"], list)
+
+
+def test_beneficiarios_filtro_no_retira(client):
+    response = client.get("/api/v1/beneficiarios/?no_retira_pacam=true")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total" in data
+    assert "items" in data
+
+
+def test_beneficiario_detalle(client):
+    # Pedir un ID que no existe — 404
+    response = client.get("/api/v1/beneficiarios/999999")
+    assert response.status_code == 404
+
+
+def test_indicadores_tendencias(client):
+    response = client.get("/api/v1/indicadores/tendencias")
+    assert response.status_code == 200
+    data = response.json()
+    assert "serie" in data
+    assert "es_sintetica" in data
+    assert isinstance(data["serie"], list)
+    assert len(data["serie"]) >= 3
+    # Cada punto tiene los campos esperados
+    punto = data["serie"][0]
+    assert "mes" in punto
+    assert "pct_riesgo_alto" in punto
+    assert "pct_inseg_moderada_severa" in punto
+
+
+def test_indicadores_tendencias_con_meses(client):
+    response = client.get("/api/v1/indicadores/tendencias?meses=3")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["serie"]) == 3

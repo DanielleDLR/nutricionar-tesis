@@ -12,6 +12,10 @@ router = APIRouter()
 def list_beneficiarios(
     region: Optional[str] = Query(None),
     riesgo: Optional[str] = Query(None, description="alto, medio, bajo"),
+    zona: Optional[str] = Query(None, description="urbano, rural"),
+    no_retira_pacam: Optional[bool] = Query(
+        None, description="True para filtrar solo beneficiarios PACAM que no retiran"
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -33,14 +37,23 @@ def list_beneficiarios(
     if riesgo:
         base += " AND i.nivel_riesgo = :riesgo"
         params["riesgo"] = riesgo
+    if zona:
+        base += " AND h.zona = :zona"
+        params["zona"] = zona
+    if no_retira_pacam is True:
+        # Beneficiarios inscritos en PACAM (acceso_pacam=TRUE) pero con riesgo alto/medio
+        base += " AND h.acceso_pacam = TRUE AND i.nivel_riesgo IN ('alto', 'medio')"
 
     total = db.execute(text(f"SELECT COUNT(*) {base}"), params).scalar()
 
     rows = db.execute(text(f"""
         SELECT p.id, p.edad, p.sexo, h.region, h.comuna, h.zona,
-               p.imc, p.nivel_inseguridad, i.nivel_riesgo, i.probabilidad_riesgo
+               p.imc, p.nivel_inseguridad, p.vive_solo,
+               p.tiene_diabetes, p.tiene_hipertension, p.tiene_depresion,
+               h.acceso_pacam, h.quintil_ingreso,
+               i.nivel_riesgo, i.probabilidad_riesgo
         {base}
-        ORDER BY i.probabilidad_riesgo DESC
+        ORDER BY i.probabilidad_riesgo DESC NULLS LAST
         LIMIT :limit OFFSET :offset
     """), {**params, "limit": page_size, "offset": offset}).mappings().all()
 
@@ -57,10 +70,14 @@ def get_beneficiario(
     beneficiario_id: int = Path(..., description="ID del adulto mayor"),
     db: Session = Depends(get_db),
 ):
-    """Detalle completo de un adulto mayor y su evaluación nutricional."""
+    """Detalle completo de un adulto mayor y su evaluacion nutricional."""
     row = db.execute(text("""
-        SELECT p.*, h.region, h.comuna, h.zona, h.ingreso_total, h.quintil_ingreso,
-               h.acceso_pacam, h.acceso_rsh,
+        SELECT p.id, p.edad, p.sexo, p.vive_solo, p.estado_civil, p.escolaridad,
+               p.peso_kg, p.talla_cm, p.imc, p.circunferencia_pantorrilla,
+               p.tiene_diabetes, p.tiene_hipertension, p.tiene_depresion,
+               p.puntaje_elcsa, p.nivel_inseguridad,
+               h.region, h.comuna, h.zona, h.ingreso_total, h.quintil_ingreso,
+               h.acceso_pacam, h.acceso_rsh, h.hacinamiento,
                i.nivel_riesgo, i.probabilidad_riesgo, i.estado_nutricional,
                i.riesgo_sarcopenia, i.riesgo_desnutricion,
                i.factor_1, i.factor_2, i.factor_3, i.fecha_calculo

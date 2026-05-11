@@ -149,3 +149,12 @@ export async function checkHealth() {
   const { data } = await apiFetch('/health')
   return data?.status === 'healthy'
 }
+
+/**
+ * GET /api/v1/indicadores/tendencias
+ * Evolucion mensual de indicadores nutricionales.
+ * @param {Object} params - { meses?, region? }
+ */
+export async function getTendencias(params = {}) {
+  return apiFetch('/api/v1/indicadores/tendencias', params)
+}

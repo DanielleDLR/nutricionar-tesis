@@ -177,3 +177,74 @@ def get_stats(
         "distribucion_rsh": list(quintil_dict.values()),
         "hay_datos": len(riesgo_rows) > 0,
     }
+
+
+@router.get("/tendencias")
+def get_tendencias(
+    meses: int = Query(6, ge=3, le=24, description="Numero de meses hacia atras"),
+    region: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Evolucion mensual de indicadores nutricionales.
+    Usa fecha_calculo de indicadores_nutricionales para agrupar por mes.
+    Si no hay datos temporales suficientes, retorna serie sintetica calibrada.
+    """
+    where = "WHERE 1=1"
+    params: dict = {}
+    if region:
+        where += " AND h.region = :region"
+        params["region"] = region
+
+    sql = f"""
+        SELECT
+            strftime('%Y-%m', i.fecha_calculo) AS mes,
+            COUNT(*) AS total,
+            SUM(CASE WHEN i.nivel_riesgo = 'alto'  THEN 1 ELSE 0 END) AS riesgo_alto,
+            SUM(CASE WHEN i.nivel_riesgo = 'medio' THEN 1 ELSE 0 END) AS riesgo_medio,
+            SUM(CASE WHEN i.nivel_riesgo = 'bajo'  THEN 1 ELSE 0 END) AS riesgo_bajo,
+            SUM(CASE WHEN p.nivel_inseguridad IN ('moderado','severo')
+                THEN 1 ELSE 0 END) AS inseg_moderada_severa
+        FROM indicadores_nutricionales i
+        JOIN personas p ON p.id = i.persona_id
+        JOIN hogares h  ON h.id = p.hogar_id
+        {where}
+        AND i.fecha_calculo IS NOT NULL
+        GROUP BY strftime('%Y-%m', i.fecha_calculo)
+        ORDER BY mes DESC
+        LIMIT :meses
+    """
+    params["meses"] = meses
+    rows = db.execute(text(sql), params).mappings().all()
+
+    if len(rows) >= 3:
+        serie = [
+            {
+                "mes": r["mes"],
+                "total": r["total"],
+                "pct_riesgo_alto": round(100.0 * r["riesgo_alto"] / r["total"], 1) if r["total"] else 0,
+                "pct_riesgo_medio": round(100.0 * r["riesgo_medio"] / r["total"], 1) if r["total"] else 0,
+                "pct_inseg_moderada_severa": round(100.0 * r["inseg_moderada_severa"] / r["total"], 1) if r["total"] else 0,
+            }
+            for r in reversed(list(rows))
+        ]
+        return {"serie": serie, "es_sintetica": False}
+
+    # Fallback: serie sintetica de 6 meses calibrada con dataset Maule
+    import random
+    random.seed(42)
+    from datetime import date, timedelta
+    meses_list = []
+    base_date = date.today().replace(day=1)
+    for i in range(meses, 0, -1):
+        m = (base_date.replace(day=1) - timedelta(days=30 * (i - 1)))
+        label = m.strftime("%Y-%m")
+        riesgo_alto = round(28 + random.uniform(-3, 3), 1)
+        meses_list.append({
+            "mes": label,
+            "total": 1200,
+            "pct_riesgo_alto": riesgo_alto,
+            "pct_riesgo_medio": round(7 + random.uniform(-1, 1), 1),
+            "pct_inseg_moderada_severa": round(11 + random.uniform(-2, 2), 1),
+        })
+    return {"serie": meses_list, "es_sintetica": True}

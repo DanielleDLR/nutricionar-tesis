@@ -3,6 +3,7 @@ import TopBar from '../../components/TopBar/TopBar'
 import FilterSidebar from '../../components/FilterSidebar/FilterSidebar'
 import KPIStrip from '../../components/KPIStrip/KPIStrip'
 import MapPanel from '../../components/MapPanel/MapPanel'
+import TendenciasChart from '../../components/TendenciasChart/TendenciasChart'
 import StatsPanel from '../../components/StatsPanel/StatsPanel'
 import PredictionPanel from '../../components/PredictionPanel/PredictionPanel'
 import './Dashboard.css'
@@ -48,6 +49,7 @@ export default function Dashboard() {
         <main className="dash-main">
           <KPIStrip filters={filters} />
           <MapPanel filters={filters} />
+          <TendenciasChart filters={filters} />
           <StatsPanel filters={filters} />
           <PredictionPanel />
 
