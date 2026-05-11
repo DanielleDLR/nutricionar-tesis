@@ -1,23 +1,19 @@
 """
-predict.py — Módulo de inferencia del modelo de riesgo nutricional
-===================================================================
-Carga los artefactos entrenados y expone una función predict() usada
-por el router FastAPI. Soporta fallback heurístico si el modelo no está
-disponible (útil en CI o entorno sin artefactos).
+predict.py - Modulo de inferencia del modelo de riesgo nutricional
+Carga los artefactos entrenados y expone predict() para el router FastAPI.
+Soporta fallback heuristico si el modelo no esta disponible.
 """
 
 import json
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
 from ml.features import (
     FEATURE_NAMES,
     NIVEL_RIESGO_INV,
-    NIVEL_RIESGO_MAP,
     build_feature_vector,
 )
 
@@ -36,8 +32,8 @@ def _load_model():
 
     if not rf_path.exists():
         log.warning(
-            "Modelo ML no encontrado en %s — usando heurística de fallback",
-            rf_path
+            "Modelo ML no encontrado en %s - usando heuristica de fallback",
+            rf_path,
         )
         return None, {}
 
@@ -52,10 +48,10 @@ def _load_model():
     return model, medians
 
 
-def _heuristic_predict(record: dict) -> tuple[str, float, list[str]]:
+def _heuristic_predict(record: dict) -> tuple:
     """
-    Predicción heurística de fallback basada en reglas clínicas MNA.
-    Se usa cuando el modelo .pkl no está disponible.
+    Prediccion heuristica de fallback basada en reglas clinicas MNA.
+    Se usa cuando el modelo .pkl no esta disponible.
     """
     score = 0.0
     factors = []
@@ -66,7 +62,6 @@ def _heuristic_predict(record: dict) -> tuple[str, float, list[str]]:
     if isinstance(inseg, str):
         inseg = {"severo": 3, "moderado": 2, "leve": 1}.get(inseg, 0)
 
-    # MNA puntaje (peso 40%)
     if mna < 17:
         score += 0.4
         factors.append("puntaje_mna_bajo")
@@ -74,7 +69,6 @@ def _heuristic_predict(record: dict) -> tuple[str, float, list[str]]:
         score += 0.2
         factors.append("puntaje_mna_riesgo")
 
-    # IMC (peso 20%)
     if imc < 18.5:
         score += 0.2
         factors.append("imc_bajo_peso")
@@ -82,14 +76,12 @@ def _heuristic_predict(record: dict) -> tuple[str, float, list[str]]:
         score += 0.1
         factors.append("imc_limite")
 
-    # Inseguridad alimentaria (peso 15%)
     if inseg >= 3:
         score += 0.15
         factors.append("inseg_alimentaria_severa")
     elif inseg >= 2:
         score += 0.07
 
-    # Morbilidades (peso 15%)
     for key, label in [
         ("depresion", "depresion"),
         ("limitacion_fisica", "limitacion_fisica"),
@@ -99,7 +91,6 @@ def _heuristic_predict(record: dict) -> tuple[str, float, list[str]]:
             score += 0.05
             factors.append(label)
 
-    # Vive solo (peso 5%)
     if record.get("vive_solo"):
         score += 0.05
         factors.append("vive_solo")
@@ -118,50 +109,43 @@ def _heuristic_predict(record: dict) -> tuple[str, float, list[str]]:
     return nivel, round(score, 3), factors[:5]
 
 
-def predict(record: dict) -> tuple[str, float, list[str], list[dict]]:
+def predict(record: dict) -> tuple:
     """
     Predice el nivel de riesgo nutricional para una persona.
 
-    Parámetros:
-        record: dict con features (ver ml/features.py para nombres)
-
     Retorna:
         (nivel_riesgo, probabilidad, factores_principales, todas_probabilidades)
-        donde nivel_riesgo ∈ {"bajo","medio","alto","critico"}
-        y probabilidad ∈ [0.0, 1.0]
     """
+    import pandas as pd
+
     model, medians = _load_model()
 
     if model is None:
         nivel, prob, factors = _heuristic_predict(record)
-        probs_all = []
-        return nivel, prob, factors, probs_all
+        return nivel, prob, factors, []
 
-    # Feature vector — usar DataFrame para conservar nombres de features
-    import pandas as pd
     x_arr = build_feature_vector(record, medians)
     x = pd.DataFrame([x_arr], columns=FEATURE_NAMES)
 
-    # Probabilidades por clase
     proba = model.predict_proba(x)[0]
     classes = model.classes_
 
-    # Nivel predicho
     pred_class = int(classes[np.argmax(proba)])
     nivel = NIVEL_RIESGO_INV.get(pred_class, "medio")
     prob = float(np.max(proba))
 
-    # Construir lista de probabilidades por nivel
     probs_all = [
-        {"nivel": NIVEL_RIESGO_INV.get(int(c), str(c)), "probabilidad": round(float(p), 4)}
+        {
+            "nivel": NIVEL_RIESGO_INV.get(int(c), str(c)),
+            "probabilidad": round(float(p), 4),
+        }
         for c, p in zip(classes, proba)
     ]
 
-    # Factores principales: features con mayor importancia × valor del registro
     try:
         importances = model.feature_importances_
-        x_arr = x.values[0]
-        contribution = np.abs(importances * x_arr)
+        x_vals = x.values[0]
+        contribution = np.abs(importances * x_vals)
         top_idx = np.argsort(contribution)[::-1][:5]
         factors = [FEATURE_NAMES[i] for i in top_idx if contribution[i] > 0.0]
     except Exception:
@@ -190,4 +174,9 @@ def model_info() -> dict:
             for k in [
                 "rf_train_accuracy",
                 "cv_f1_macro_mean",
-             
+                "cv_f1_macro_std",
+                "n_samples",
+                "class_distribution",
+            ]
+        },
+    }
