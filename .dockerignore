@@ -1,0 +1,27 @@
+# Frontend deps
+nutricionar/node_modules/
+nutricionar/dist/
+nutricionar/.vite/
+
+# Python
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/venv/
+backend/.pytest_cache/
+backend/pytest-cache-files-*/
+backend/*.db
+
+# ML artefactos binarios
+backend/ml/artefactos/*.pkl
+backend/ml/artefactos/metrics.json
+
+# Data
+data/*.xlsx
+data/*.csv
+
+# Misc
+.git/
+.DS_Store
+*.log
