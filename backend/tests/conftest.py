@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.main import app
 from app.database import Base, get_db
+import app.models  # noqa: F401 — registra los modelos con Base antes de create_all
 
 # Base de datos SQLite en memoria para tests (sin necesitar PostgreSQL)
 TEST_DATABASE_URL = "sqlite:///./test.db"
