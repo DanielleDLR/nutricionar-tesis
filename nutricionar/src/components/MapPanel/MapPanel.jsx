@@ -32,6 +32,7 @@ export default function MapPanel({ filters = {} }) {
   const mapRef         = useRef(null)
   const mapInstanceRef = useRef(null)
   const layerGroupRef  = useRef(null)
+  const heatLayerRef   = useRef(null)
 
   const [selected, setSelected]   = useState(null)
   const [comunas,  setComunas]    = useState([])
@@ -96,22 +97,43 @@ export default function MapPanel({ filters = {} }) {
     mapInstanceRef.current = map
   }, [])
 
-  // Redibujar marcadores cuando cambian las comunas
+  // Redibujar capas cuando cambian las comunas o el tipo de mapa
   useEffect(() => {
     if (!mapInstanceRef.current || !window.L || comunas.length === 0) return
 
     const L = window.L
-    layerGroupRef.current.clearLayers()
+    const map = mapInstanceRef.current
 
+    // Limpiar capas previas (marcadores y calor)
+    layerGroupRef.current.clearLayers()
+    if (heatLayerRef.current) {
+      map.removeLayer(heatLayerRef.current)
+      heatLayerRef.current = null
+    }
+
+    if (mapType === 'calor' && L.heatLayer) {
+      // Mapa de calor: intensidad proporcional al % de riesgo de la comuna
+      const points = comunas.map(c => [c.lat, c.lon, Math.min((c.pct ?? 0) / 50, 1)])
+      heatLayerRef.current = L.heatLayer(points, {
+        radius: 35,
+        blur: 25,
+        maxZoom: 10,
+        minOpacity: 0.35,
+        gradient: { 0.3: '#2C5530', 0.5: '#D9A847', 0.7: '#C76123', 1.0: '#8B1A1A' },
+      }).addTo(map)
+      return
+    }
+
+    // Coroplético / Burbujas: círculos coloreados por nivel de riesgo
     comunas.forEach(c => {
-      const radius = Math.sqrt(c.n) * 1.2 + 4
+      const radius = mapType === 'coropletico' ? 13 : Math.sqrt(c.n) * 1.2 + 4
       const marker = L.circleMarker([c.lat, c.lon], {
         radius,
         fillColor: RISK_COLORS[c.nivel] ?? RISK_COLORS.bajo,
         color:       'white',
         weight:      2,
         opacity:     1,
-        fillOpacity: 0.78,
+        fillOpacity: mapType === 'coropletico' ? 0.9 : 0.78,
       })
 
       marker.on('click', () => setSelected(c))
@@ -120,7 +142,7 @@ export default function MapPanel({ filters = {} }) {
       )
       layerGroupRef.current.addLayer(marker)
     })
-  }, [comunas])
+  }, [comunas, mapType])
 
   const sel = selected
 
