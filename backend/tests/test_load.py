@@ -24,22 +24,26 @@ from app.models import Hogar, Persona, IndicadorNutricional, ComunaResumen
 from tests.conftest import TestingSessionLocal
 
 # --- Parámetros configurables ------------------------------------------------
-N_PERSONAS  = int(os.getenv("LOAD_TEST_N", "500"))
-N_WORKERS   = int(os.getenv("LOAD_TEST_WORKERS", "8"))
-N_REQUESTS  = int(os.getenv("LOAD_TEST_REQUESTS", "240"))
+N_PERSONAS = int(os.getenv("LOAD_TEST_N", "500"))
+N_WORKERS = int(os.getenv("LOAD_TEST_WORKERS", "8"))
+N_REQUESTS = int(os.getenv("LOAD_TEST_REQUESTS", "240"))
 
 # Umbrales de aceptación (segundos). Generosos para correr en CI/local.
-P95_MAX_S   = float(os.getenv("LOAD_TEST_P95_MAX", "1.5"))
+P95_MAX_S = float(os.getenv("LOAD_TEST_P95_MAX", "1.5"))
 
 # Comunas del Maule (subconjunto representativo) para repartir la población.
 COMUNAS = [
-    ("07101", "Talca"),       ("07401", "Linares"),
-    ("07301", "Curicó"),      ("07201", "Cauquenes"),
-    ("07406", "Parral"),      ("07102", "Constitución"),
-    ("07108", "San Clemente"),("07310", "Molina"),
+    ("07101", "Talca"),
+    ("07401", "Linares"),
+    ("07301", "Curicó"),
+    ("07201", "Cauquenes"),
+    ("07406", "Parral"),
+    ("07102", "Constitución"),
+    ("07108", "San Clemente"),
+    ("07310", "Molina"),
 ]
 NIVELES_RIESGO = ["alto", "medio", "bajo"]
-NIVELES_INSEG  = ["seguro", "leve", "moderado", "severo"]
+NIVELES_INSEG = ["seguro", "leve", "moderado", "severo"]
 
 
 # --- Siembra del dataset sintético ------------------------------------------
