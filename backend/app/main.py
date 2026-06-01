@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from app.routers import indicadores, beneficiarios, prediccion, comunas
 
 app = FastAPI(
@@ -7,6 +8,10 @@ app = FastAPI(
     description="API REST — Plataforma Predictiva de Riesgo de Desnutrición en Adultos Mayores",
     version="0.1.0",
 )
+
+# Compresión GZip de respuestas (>500 bytes) para reducir el payload de los
+# endpoints de datos y mejorar el tiempo de transferencia (S14 · rendimiento).
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 app.add_middleware(
     CORSMiddleware,

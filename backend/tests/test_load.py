@@ -108,6 +108,10 @@ def seed_dataset():
         db.commit()
     finally:
         db.close()
+
+    # Invalidar el caché para que los agregados reflejen los datos sembrados
+    from app.cache import clear_cache
+    clear_cache()
     yield
 
 

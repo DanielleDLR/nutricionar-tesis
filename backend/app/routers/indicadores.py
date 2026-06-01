@@ -4,6 +4,7 @@ from sqlalchemy import text
 from typing import Optional
 
 from app.database import get_db
+from app.cache import cache_get, cache_set
 
 router = APIRouter()
 
@@ -31,7 +32,12 @@ def get_indicadores(
 
 @router.get("/resumen")
 def get_resumen_nacional(db: Session = Depends(get_db)):
-    """Totales nacionales de indicadores nutricionales."""
+    """Totales nacionales de indicadores nutricionales (cacheado por TTL)."""
+    cache_key = "indicadores:resumen_nacional"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     sql = """
         SELECT
             COUNT(DISTINCT p.id) AS total_adultos_mayores,
@@ -47,9 +53,11 @@ def get_resumen_nacional(db: Session = Depends(get_db)):
         JOIN indicadores_nutricionales i ON i.persona_id = p.id
     """
     result = db.execute(text(sql)).mappings().one_or_none()
-    return dict(result) if result else {
+    payload = dict(result) if result else {
         "message": "Sin datos aun - carga el dataset primero"
     }
+    cache_set(cache_key, payload)
+    return payload
 
 
 @router.get("/stats")
@@ -62,6 +70,11 @@ def get_stats(
     Retorna: distribucion_riesgo, distribucion_inseguridad,
              comorbilidades, distribucion_quintil.
     """
+    cache_key = f"indicadores:stats:{region or 'all'}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     where = "WHERE 1=1"
     params: dict = {}
     if region:
@@ -170,13 +183,15 @@ def get_stats(
         quintil_dict[q]["total"] += r["n"]
         quintil_dict[q]["por_riesgo"][r["riesgo"]] = r["n"]
 
-    return {
+    payload = {
         "distribucion_riesgo": distribucion_riesgo,
         "distribucion_inseguridad": distribucion_inseguridad,
         "comorbilidades": comorbilidades,
         "distribucion_rsh": list(quintil_dict.values()),
         "hay_datos": len(riesgo_rows) > 0,
     }
+    cache_set(cache_key, payload)
+    return payload
 
 
 @router.get("/tendencias")
