@@ -53,6 +53,14 @@ def seed_dataset():
     random.seed(42)
     db = TestingSessionLocal()
     try:
+        # Estado limpio para evitar colisiones con otros módulos de test
+        # (p. ej. comuna_cod es UNIQUE en ComunaResumen).
+        db.query(IndicadorNutricional).delete()
+        db.query(Persona).delete()
+        db.query(Hogar).delete()
+        db.query(ComunaResumen).delete()
+        db.commit()
+
         # Resumen comunal sintético
         for cod, nombre in COMUNAS:
             db.add(ComunaResumen(
