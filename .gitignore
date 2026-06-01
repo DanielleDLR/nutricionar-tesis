@@ -82,3 +82,10 @@ logs/
 # ─────────────────────────────────────────
 backend/ml/artefactos/*.pkl
 backend/ml/artefactos/metrics.json
+# Excepción: el modelo entrenado SÍ se versiona (predicción usa RandomForest,
+# no la heurística de fallback). Reproducible con scripts/generar_dataset_sintetico.py
+# + scripts/train_model.py.
+!backend/ml/artefactos/modelo_rf.pkl
+!backend/ml/artefactos/medians.pkl
+!backend/ml/artefactos/feature_names.pkl
+!backend/ml/artefactos/metrics.json

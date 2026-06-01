@@ -1,0 +1,73 @@
+{
+  "cv_f1_macro_mean": 0.7364,
+  "cv_f1_macro_std": 0.0174,
+  "confusion_matrix": [
+    [
+      135,
+      3,
+      0,
+      0
+    ],
+    [
+      20,
+      400,
+      17,
+      0
+    ],
+    [
+      0,
+      26,
+      385,
+      11
+    ],
+    [
+      0,
+      0,
+      3,
+      200
+    ]
+  ],
+  "label_names": [
+    "bajo",
+    "medio",
+    "alto",
+    "critico"
+  ],
+  "feature_importances": {
+    "edad": 0.049414714888259284,
+    "sexo_num": 0.00811676439285501,
+    "zona_num": 0.005004403041549802,
+    "ingreso_per_capita": 0.03961112440592417,
+    "num_carencias": 0.036140144639817684,
+    "hacinamiento": 0.004417920160191704,
+    "imc": 0.1123721739216001,
+    "circ_pantorrilla": 0.1794854062477568,
+    "puntaje_mna": 0.3457974512608115,
+    "perdio_peso": 0.0402762589626131,
+    "diabetes": 0.011410110513650552,
+    "hta": 0.009550866169650181,
+    "depresion": 0.01850483654626717,
+    "limitacion_fisica": 0.026564501525198556,
+    "inseg_alimentaria": 0.07044969979328247,
+    "acceso_pacam": 0.006929327459662711,
+    "movilidad_num": 0.023671577882071113,
+    "vive_solo": 0.012282718188838077
+  },
+  "dt_train_accuracy": 0.7783,
+  "rf_train_accuracy": 0.9333,
+  "n_samples": 1200,
+  "class_distribution": {
+    "medio": 437,
+    "alto": 422,
+    "critico": 203,
+    "bajo": 138
+  },
+  "medians": {
+    "edad": 78.0,
+    "ingreso_per_capita": 258257.0,
+    "imc": 25.3,
+    "circ_pantorrilla": 32.4,
+    "puntaje_mna": 22.9,
+    "num_carencias": 2.0
+  }
+}

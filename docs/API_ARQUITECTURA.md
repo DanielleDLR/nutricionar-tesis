@@ -198,7 +198,8 @@ Relación: `hogares 1—N personas 1—N indicadores_nutricionales`.
   `ml/features.py`.
 - **Variable objetivo:** `nivel_riesgo` (4 clases: bajo, medio, alto, crítico).
 - **Entrenamiento:** dataset sintético piloto (N≈1.200). F1-macro CV 5-fold
-  ≈ 0.81.
+  ≈ 0.74 (± 0.02); accuracy de entrenamiento ≈ 0.93. Reproducible con
+  `scripts/generar_dataset_sintetico.py` + `scripts/train_model.py --eval`.
 - **Inferencia:** `ml/predict.py` carga el modelo con `lru_cache`, construye
   el vector de features y devuelve nivel, probabilidad y factores por
   importancia. Incluye fallback heurístico.
