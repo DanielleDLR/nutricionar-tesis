@@ -156,20 +156,28 @@ export default function MapPanel({ filters = {} }) {
             <span className="data-source-badge">datos de muestra</span>
           )}
         </div>
-        <div className="panel-actions">
+        <div className="panel-actions" role="group" aria-label="Tipo de visualización del mapa">
           {['Coroplético','Burbujas','Calor'].map(t => (
             <button
               key={t}
               className={`panel-action ${mapType === t.toLowerCase() ? 'active' : ''}`}
               onClick={() => setMapType(t.toLowerCase())}
+              aria-pressed={mapType === t.toLowerCase()}
             >{t}</button>
           ))}
-          <button className="panel-action">⛶ Pantalla completa</button>
+          <button className="panel-action" aria-label="Ver mapa en pantalla completa">
+            <span aria-hidden="true">⛶</span> Pantalla completa
+          </button>
         </div>
       </div>
 
       <div className="map-wrap">
-        <div ref={mapRef} className="leaflet-map" />
+        <div
+          ref={mapRef}
+          className="leaflet-map"
+          role="application"
+          aria-label="Mapa interactivo de riesgo nutricional por comuna en la región del Maule"
+        />
 
         <aside className="map-side">
           {sel ? (

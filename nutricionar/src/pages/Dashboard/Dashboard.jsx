@@ -22,6 +22,7 @@ export default function Dashboard() {
 
   return (
     <div className="page-dashboard">
+      <a href="#contenido-principal" className="skip-link">Saltar al contenido</a>
       <TopBar />
 
       <section className="hero">
@@ -46,7 +47,7 @@ export default function Dashboard() {
       <div className="dash-layout">
         <FilterSidebar onFiltersChange={handleFiltersChange} />
 
-        <main className="dash-main">
+        <main id="contenido-principal" className="dash-main">
           <KPIStrip filters={filters} />
           <MapPanel filters={filters} />
           <TendenciasChart filters={filters} />
