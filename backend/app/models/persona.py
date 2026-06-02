@@ -30,6 +30,10 @@ class Persona(Base):
     puntaje_elcsa = Column(Integer, nullable=True)               # 0-15
     nivel_inseguridad = Column(String(10), nullable=True)        # seguro/leve/moderado/severo
 
+    # Adherencia a programas: motivo declarado de no retiro del beneficio PACAM
+    # (enum: lejania / desconocimiento / movilidad / otro). Sintético en el piloto.
+    motivo_no_retiro = Column(String(20), nullable=True)
+
     # Fuente del dato
     fuente = Column(String(20), nullable=True)                   # "CASEN", "ENS", "SINTETICO"
     anio_encuesta = Column(Integer, nullable=True)

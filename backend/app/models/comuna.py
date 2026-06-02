@@ -9,6 +9,9 @@ class ComunaResumen(Base):
     comuna_cod = Column(String(5), unique=True, nullable=False, index=True)
     comuna_nombre = Column(String(100), nullable=False)
     region_cod = Column(String(2), nullable=False, index=True)
+    # Centroide geográfico (fuente: cartografía pública INE). Alimenta el mapa.
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
     total_personas = Column(Integer, default=0)
     n_desnutricion = Column(Integer, default=0)
     n_riesgo = Column(Integer, default=0)

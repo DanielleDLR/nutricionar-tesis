@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getStats } from '../../services/api'
+import { getStats, getMotivosNoRetiro } from '../../services/api'
 import './StatsPanel.css'
 
 // Datos sinteticos de fallback (calibrados con dataset Maule)
@@ -147,23 +147,49 @@ function ComorbilidadesPanel({ data, isMock }) {
   )
 }
 
-/* ── PACAM (hardcoded — sin fuente BD) ── */
-function PacamPanel() {
+/* ── PACAM · motivos de no retiro (API: /beneficiarios/no-retiro/motivos) ── */
+const PACAM_COLORS = {
+  lejania: '#8B1A1A',
+  movilidad: '#C76123',
+  desconocimiento: '#D9A847',
+  otro: '#8A8B8D',
+}
+const PACAM_FALLBACK = [
+  { motivo: 'lejania',        label: 'Lejanía / distancia',       pct: 32, n: 0 },
+  { motivo: 'movilidad',      label: 'Movilidad reducida',        pct: 28, n: 0 },
+  { motivo: 'desconocimiento', label: 'Desconocimiento del beneficio', pct: 24, n: 0 },
+  { motivo: 'otro',           label: 'Otro',                      pct: 16, n: 0 },
+]
+
+function PacamPanel({ filters = {} }) {
+  const [motivos, setMotivos] = useState(PACAM_FALLBACK)
+  const [total, setTotal] = useState(0)
+  const [isMock, setIsMock] = useState(true)
+
+  useEffect(() => {
+    getMotivosNoRetiro({ region: filters.region }).then(({ data, error }) => {
+      if (!error && data && data.total > 0) {
+        setMotivos(data.motivos)
+        setTotal(data.total)
+        setIsMock(false)
+      } else {
+        setMotivos(PACAM_FALLBACK)
+        setTotal(0)
+        setIsMock(true)
+      }
+    })
+  }, [filters.region])
+
   const circ = 2 * Math.PI * 40
-  const segments = [
-    { pct: 30, color: '#8B1A1A', label: 'Distancia' },
-    { pct: 28, color: '#C76123', label: 'Movilidad reducida' },
-    { pct: 22, color: '#D9A847', label: 'Desconocimiento' },
-    { pct: 12, color: '#1F4E58', label: 'Calidad percibida' },
-    { pct: 8,  color: '#8A8B8D', label: 'Otro' },
-  ]
   let offset = 0
-  const arcs = segments.map(s => {
+  const arcs = motivos.map(s => {
+    const color = PACAM_COLORS[s.motivo] || '#8A8B8D'
     const dash = (s.pct / 100) * circ
-    const arc = { ...s, dash, offset }
+    const arc = { ...s, color, dash, offset }
     offset += dash
     return arc
   })
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -171,7 +197,7 @@ function PacamPanel() {
           Adherencia PACAM
           <small>motivos de no retiro · JUNAEB</small>
         </div>
-        <span className="mock-badge">referencia</span>
+        {isMock && <span className="mock-badge">referencia</span>}
       </div>
       <div className="chart-area">
         <div className="pacam-wrap">
@@ -179,7 +205,7 @@ function PacamPanel() {
             <svg viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="40" fill="none" stroke="#F2EEE5" strokeWidth="14"/>
               {arcs.map(arc => (
-                <circle key={arc.label} cx="50" cy="50" r="40" fill="none"
+                <circle key={arc.motivo} cx="50" cy="50" r="40" fill="none"
                   stroke={arc.color} strokeWidth="14"
                   strokeDasharray={`${arc.dash} ${circ}`}
                   strokeDashoffset={`-${arc.offset}`}
@@ -188,13 +214,13 @@ function PacamPanel() {
               ))}
             </svg>
             <div className="donut-center">
-              <div className="dv">62<sup>%</sup></div>
+              <div className="dv">{isMock ? '—' : total}</div>
               <div className="dl">No retiro</div>
             </div>
           </div>
           <div className="pacam-legend">
             {arcs.map(arc => (
-              <div key={arc.label} className="pacam-legend-item">
+              <div key={arc.motivo} className="pacam-legend-item">
                 <div className="sw" style={{ background: arc.color }} />
                 <span>{arc.label}</span>
                 <span className="ppct">{arc.pct}%</span>
@@ -297,7 +323,7 @@ export default function StatsPanel({ filters = {} }) {
       <RiesgoPanel      data={s.distribucion_riesgo}      isMock={isMock} />
       <InseguridadPanel data={s.distribucion_inseguridad} isMock={isMock} />
       <ComorbilidadesPanel data={s.comorbilidades}        isMock={isMock} />
-      <PacamPanel />
+      <PacamPanel filters={filters} />
       <RSHPanel rshData={s.distribucion_rsh} riesgoData={s.distribucion_riesgo} isMock={isMock} />
     </div>
   )

@@ -21,10 +21,39 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine, text
 
+# Permitir importar el paquete `app` al ejecutar el script directamente.
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from app.data_ref.comunas_maule_geo import COMUNAS_MAULE_GEO  # noqa: E402
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:postgres@localhost:5432/nutricionar",
 )
+
+
+def ensure_geo_columns(engine):
+    """Agrega lat/lon a comunas_resumen si la tabla existe sin esas columnas."""
+    with engine.begin() as conn:
+        try:
+            cols = {
+                r[1] if not isinstance(r, dict) else r["name"]
+                for r in conn.execute(
+                    text("PRAGMA table_info(comunas_resumen)")
+                ).fetchall()
+            } if engine.dialect.name == "sqlite" else {
+                r[0] for r in conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'comunas_resumen'"
+                )).fetchall()
+            }
+        except Exception:
+            return
+        for col in ("lat", "lon"):
+            if col not in cols:
+                conn.execute(text(
+                    f"ALTER TABLE comunas_resumen ADD COLUMN {col} FLOAT"
+                ))
+
 
 # Comunas del Maule con código INE
 COMUNAS_MAULE = {
@@ -92,9 +121,10 @@ def cargar_desde_excel(xl: pd.ExcelFile, engine) -> int:
                 100.0 * (n_critico + n_alto) / total if total > 0 else 0, 2
             )
 
+            geo = COMUNAS_MAULE_GEO.get(cod, (None, None))
             conn.execute(text("""
                 INSERT INTO comunas_resumen (
-                    comuna_cod, comuna_nombre, region_cod,
+                    comuna_cod, comuna_nombre, region_cod, lat, lon,
                     total_personas, n_desnutricion, n_riesgo, n_normal,
                     pct_desnutricion, pct_riesgo_mna,
                     pct_inseg_severa, pct_inseg_mod_sev,
@@ -102,7 +132,7 @@ def cargar_desde_excel(xl: pd.ExcelFile, engine) -> int:
                     n_critico, n_alto, pct_riesgo_alto_crit,
                     nivel_riesgo_zona
                 ) VALUES (
-                    :cod, :nombre, :region,
+                    :cod, :nombre, :region, :lat, :lon,
                     :total, :n_desnut, :n_riesgo, :n_normal,
                     :pct_desnut, :pct_mna,
                     :pct_inseg_sev, :pct_inseg_ms,
@@ -111,6 +141,8 @@ def cargar_desde_excel(xl: pd.ExcelFile, engine) -> int:
                     :nivel_zona
                 )
                 ON CONFLICT (comuna_cod) DO UPDATE SET
+                    lat                  = EXCLUDED.lat,
+                    lon                  = EXCLUDED.lon,
                     total_personas       = EXCLUDED.total_personas,
                     n_desnutricion       = EXCLUDED.n_desnutricion,
                     n_riesgo             = EXCLUDED.n_riesgo,
@@ -129,6 +161,8 @@ def cargar_desde_excel(xl: pd.ExcelFile, engine) -> int:
                 "cod": cod,
                 "nombre": nombre,
                 "region": region,
+                "lat": geo[0],
+                "lon": geo[1],
                 "total": total,
                 "n_desnut": int(row.get("n_desnutricion", 0)),
                 "n_riesgo": int(row.get("n_riesgo", 0)),
@@ -198,7 +232,6 @@ def cargar_desde_bd(engine) -> int:
         """)).scalar() or 0
 
     comunas_list = list(COMUNAS_MAULE.items())
-    n_comunas = len(comunas_list)
 
     # Distribuir total de personas entre las comunas (pesos aleatorios)
     weights = [random.randint(1, 10) for _ in comunas_list]
@@ -228,9 +261,10 @@ def cargar_desde_bd(engine) -> int:
             n_pacam = round(total * float(pct_pacam) / 100 * factor)
             pct_no_ret = round(random.uniform(10, 35), 2)
 
+            geo = COMUNAS_MAULE_GEO.get(cod, (None, None))
             conn.execute(text("""
                 INSERT INTO comunas_resumen (
-                    comuna_cod, comuna_nombre, region_cod,
+                    comuna_cod, comuna_nombre, region_cod, lat, lon,
                     total_personas, n_desnutricion, n_riesgo, n_normal,
                     pct_desnutricion, pct_riesgo_mna,
                     pct_inseg_severa, pct_inseg_mod_sev,
@@ -238,7 +272,7 @@ def cargar_desde_bd(engine) -> int:
                     n_critico, n_alto, pct_riesgo_alto_crit,
                     nivel_riesgo_zona
                 ) VALUES (
-                    :cod, :nombre, :region,
+                    :cod, :nombre, :region, :lat, :lon,
                     :total, :n_desnut, :n_riesgo, :n_normal,
                     :pct_desnut, :pct_mna,
                     :pct_inseg_sev, :pct_inseg_ms,
@@ -247,6 +281,8 @@ def cargar_desde_bd(engine) -> int:
                     :nivel_zona
                 )
                 ON CONFLICT (comuna_cod) DO UPDATE SET
+                    lat                  = EXCLUDED.lat,
+                    lon                  = EXCLUDED.lon,
                     total_personas       = EXCLUDED.total_personas,
                     n_desnutricion       = EXCLUDED.n_desnutricion,
                     n_riesgo             = EXCLUDED.n_riesgo,
@@ -265,6 +301,8 @@ def cargar_desde_bd(engine) -> int:
                 "cod": cod,
                 "nombre": nombre,
                 "region": region,
+                "lat": geo[0],
+                "lon": geo[1],
                 "total": total,
                 "n_desnut": n_desnut,
                 "n_riesgo": n_riesgo,
@@ -301,6 +339,7 @@ def main():
 
     print(f"\nConectando a BD: {DATABASE_URL[:50]}...")
     engine = create_engine(DATABASE_URL)
+    ensure_geo_columns(engine)
 
     if args.reset:
         with engine.begin() as conn:

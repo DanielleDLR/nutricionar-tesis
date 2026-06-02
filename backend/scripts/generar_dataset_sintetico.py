@@ -68,6 +68,10 @@ def generar(n: int, seed: int) -> dict:
 
     inseg = rng.choice([0, 1, 2, 3], n, p=[0.55, 0.20, 0.15, 0.10])
     pacam = (rng.random(n) < 0.40).astype(int)
+    motivo_no_retiro = rng.choice(
+        ["lejania", "movilidad", "desconocimiento", "otro"],
+        n, p=[0.32, 0.28, 0.24, 0.16],
+    )
 
     # ── Puntaje clínico → etiqueta nivel_riesgo ──────────────────
     score = np.zeros(n)
@@ -107,6 +111,7 @@ def generar(n: int, seed: int) -> dict:
         "movilidad": movilidad,
         "limitacion_fisica": lim_fisica,
         "perdio_peso_3m": perdio_peso,
+        "motivo_no_retiro": motivo_no_retiro,
     })
 
     df_nutric = pd.DataFrame({

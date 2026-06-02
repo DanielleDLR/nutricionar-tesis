@@ -254,21 +254,42 @@ def get_tendencias(
         ]
         return {"serie": serie, "es_sintetica": False}
 
-    # Fallback: serie sintetica de 6 meses calibrada con dataset Maule
+    # Fallback: serie sintetica calibrada con dataset Maule.
+    # Modelo estacional coherente (no aleatorio puro):
+    #   - Mayor riesgo/inseguridad en invierno austral (jun-ago): el frio y los
+    #     costos de calefaccion deterioran la seguridad alimentaria del adulto
+    #     mayor. Factor estacional = coseno centrado en julio (mes 7).
+    #   - Leve tendencia creciente a lo largo del periodo observado.
+    #   - Varianza acotada y determinista (semilla por mes) para reproducibilidad.
+    import math
     import random
-    random.seed(42)
     from datetime import date, timedelta
+
+    def _estacional(mes_anio: int) -> float:
+        # +1 en julio (invierno), -1 en enero (verano).
+        return math.cos(2 * math.pi * (mes_anio - 7) / 12)
+
     meses_list = []
     base_date = date.today().replace(day=1)
-    for i in range(meses, 0, -1):
+    for idx, i in enumerate(range(meses, 0, -1)):
         m = (base_date.replace(day=1) - timedelta(days=30 * (i - 1)))
         label = m.strftime("%Y-%m")
-        riesgo_alto = round(28 + random.uniform(-3, 3), 1)
+        est = _estacional(m.month)
+        # Tendencia creciente suave: hasta +1.5 pp a lo largo de la ventana.
+        trend = 1.5 * (idx / max(meses - 1, 1))
+        # Ruido acotado determinista (±0.6 pp), reproducible por mes.
+        rng = random.Random(int(m.strftime("%Y%m")))
+        ruido = rng.uniform(-0.6, 0.6)
+
+        pct_alto = round(27.0 + 4.0 * est + trend + ruido, 1)
+        pct_medio = round(7.0 + 1.5 * est + 0.5 * trend + ruido * 0.4, 1)
+        pct_inseg = round(11.0 + 3.0 * est + trend + ruido * 0.5, 1)
+
         meses_list.append({
             "mes": label,
             "total": 1200,
-            "pct_riesgo_alto": riesgo_alto,
-            "pct_riesgo_medio": round(7 + random.uniform(-1, 1), 1),
-            "pct_inseg_moderada_severa": round(11 + random.uniform(-2, 2), 1),
+            "pct_riesgo_alto": max(0.0, pct_alto),
+            "pct_riesgo_medio": max(0.0, pct_medio),
+            "pct_inseg_moderada_severa": max(0.0, pct_inseg),
         })
     return {"serie": meses_list, "es_sintetica": True}

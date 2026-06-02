@@ -157,15 +157,20 @@ def cargar_datos(xl: pd.ExcelFile, session) -> dict:
             nut_row["diagnostico_depresion"].values[0]
         ) if len(nut_row) > 0 else False
 
+        motivo = str(row.get("motivo_no_retiro", "") or "").strip().lower()
+        if motivo not in ("lejania", "desconocimiento", "movilidad", "otro"):
+            motivo = None
+
         result = session.execute(text("""
             INSERT INTO personas
                 (hogar_id, edad, sexo, vive_solo, peso_kg, talla_cm, imc,
                  circunferencia_pantorrilla, tiene_diabetes, tiene_hipertension,
-                 tiene_depresion, nivel_inseguridad, fuente, anio_encuesta)
+                 tiene_depresion, nivel_inseguridad, motivo_no_retiro,
+                 fuente, anio_encuesta)
             VALUES
                 (:hogar_id, :edad, :sexo, :vive_solo, NULL, NULL, :imc,
                  :pantorrilla, :diabetes, :hta,
-                 :depresion, :inseg, :fuente, :anio)
+                 :depresion, :inseg, :motivo, :fuente, :anio)
             RETURNING id
         """), {
             "hogar_id": hogar_id,
@@ -178,6 +183,7 @@ def cargar_datos(xl: pd.ExcelFile, session) -> dict:
             "hta": hta,
             "depresion": depresion,
             "inseg": nivel_inseg,
+            "motivo": motivo,
             "fuente": FUENTE,
             "anio": ANIO,
         })

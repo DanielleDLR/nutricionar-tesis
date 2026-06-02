@@ -118,6 +118,16 @@ export async function getBeneficiario(id) {
   return apiFetch(`/api/v1/beneficiarios/${id}`)
 }
 
+/**
+ * GET /api/v1/beneficiarios/no-retiro/motivos
+ * Conteo de no-retiradores PACAM por motivo declarado.
+ * @param {Object} filters - { region? }
+ * @returns { total, motivos: [{ motivo, label, n, pct }] }
+ */
+export async function getMotivosNoRetiro(filters = {}) {
+  return apiFetch('/api/v1/beneficiarios/no-retiro/motivos', filters)
+}
+
 // === Prediccion ML ==========================================================
 
 /**

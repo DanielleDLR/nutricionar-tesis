@@ -65,6 +65,66 @@ def list_beneficiarios(
     }
 
 
+MOTIVOS_NO_RETIRO = ["lejania", "desconocimiento", "movilidad", "otro"]
+
+# Etiquetas legibles para el frontend (donut de adherencia PACAM).
+MOTIVO_LABELS = {
+    "lejania": "Lejanía / distancia al punto",
+    "desconocimiento": "Desconocimiento del beneficio",
+    "movilidad": "Movilidad reducida",
+    "otro": "Otro",
+}
+
+
+@router.get("/no-retiro/motivos")
+def motivos_no_retiro(
+    region: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Conteo de beneficiarios PACAM que no retiran el beneficio, agrupados por
+    motivo declarado (lejania / desconocimiento / movilidad / otro).
+
+    Alimenta el donut de adherencia PACAM. Cohorte: inscritos en PACAM con
+    riesgo alto/medio (misma definición que el filtro `no_retira_pacam`).
+    """
+    where = (
+        "WHERE h.acceso_pacam = TRUE "
+        "AND i.nivel_riesgo IN ('alto', 'medio')"
+    )
+    params: dict = {}
+    if region:
+        where += " AND h.region = :region"
+        params["region"] = region
+
+    try:
+        rows = db.execute(text(f"""
+            SELECT COALESCE(p.motivo_no_retiro, 'otro') AS motivo,
+                   COUNT(*) AS n
+            FROM personas p
+            JOIN hogares h                   ON h.id = p.hogar_id
+            JOIN indicadores_nutricionales i ON i.persona_id = p.id
+            {where}
+            GROUP BY COALESCE(p.motivo_no_retiro, 'otro')
+        """), params).mappings().all()
+        conteo = {r["motivo"]: r["n"] for r in rows}
+    except Exception:
+        # Tabla legada sin la columna motivo_no_retiro.
+        conteo = {}
+
+    total = sum(conteo.values())
+    motivos = [
+        {
+            "motivo": m,
+            "label": MOTIVO_LABELS[m],
+            "n": conteo.get(m, 0),
+            "pct": round(100.0 * conteo.get(m, 0) / total, 1) if total else 0.0,
+        }
+        for m in MOTIVOS_NO_RETIRO
+    ]
+    return {"total": total, "motivos": motivos}
+
+
 @router.get("/{beneficiario_id}")
 def get_beneficiario(
     beneficiario_id: int = Path(..., description="ID del adulto mayor"),

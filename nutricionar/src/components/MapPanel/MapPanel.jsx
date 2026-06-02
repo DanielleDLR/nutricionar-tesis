@@ -3,22 +3,27 @@ import { COMUNAS_MAULE, RISK_COLORS } from '../../data/mockData'
 import { getComunas } from '../../services/api'
 import './MapPanel.css'
 
-/** Índice estático lat/lon por código CUT (la API no almacena coordenadas) */
+/** Índice estático de respaldo por código CUT (solo si la API no trae lat/lon) */
 const COORDS = Object.fromEntries(
   COMUNAS_MAULE.map(c => [c.cod, { lat: c.lat, lon: c.lon, nombre: c.nombre }])
 )
 
-/** Fusiona datos de la API con coordenadas estáticas */
+/**
+ * Fusiona datos de la API. Prioriza las coordenadas lat/lon servidas por el
+ * backend (comunas_resumen); recurre al índice estático solo como respaldo.
+ */
 function mergeWithCoords(apiComunas) {
   return apiComunas
     .map(c => {
-      const geo = COORDS[c.comuna_cod]
-      if (!geo) return null
+      const geo = COORDS[c.comuna_cod] || {}
+      const lat = c.lat ?? geo.lat
+      const lon = c.lon ?? geo.lon
+      if (lat == null || lon == null) return null
       return {
         cod:    c.comuna_cod,
         nombre: c.comuna_nombre || geo.nombre,
-        lat:    geo.lat,
-        lon:    geo.lon,
+        lat,
+        lon,
         n:      c.total_personas,
         pct:    c.pct_riesgo_alto_crit,
         nivel:  c.nivel_riesgo_zona || 'bajo',

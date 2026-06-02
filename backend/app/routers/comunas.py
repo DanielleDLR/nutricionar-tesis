@@ -23,6 +23,8 @@ class ComunaOut(BaseModel):
     comuna_cod: str
     comuna_nombre: str
     region_cod: str
+    lat: Optional[float] = None
+    lon: Optional[float] = None
     total_personas: int
     n_desnutricion: int
     n_riesgo: int
