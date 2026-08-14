@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import TopBar from '../../components/TopBar/TopBar'
-import { getBeneficiario } from '../../services/api'
+import { getBeneficiario, predictRiesgo, registrarVisita } from '../../services/api'
 import { PATIENT_DETAIL } from '../../data/mockData'
 import './PatientDetail.css'
 
@@ -9,27 +9,119 @@ function colorVar(nivel) {
   return `var(--${nivel})`
 }
 
+// Etiquetas legibles para los nombres de feature del modelo IPRN (RF v1.0).
+// Nota: puntaje_mna NO es una feature del modelo (no disponible en ENS/CASEN).
+// Las 17 features del modelo estan definidas en backend/ml/features.py.
+const FACTOR_LABELS = {
+  // Features IPRN — antropometria
+  circ_pantorrilla:        'Circ. pantorrilla',
+  circ_pantorrilla_baja:   'Circ. pantorrilla baja (<31 cm)',
+  imc:                     'IMC',
+  imc_bajo_peso:           'IMC bajo peso (<18.5)',
+  imc_limite_am:           'IMC limite adulto mayor (<22)',
+  perdio_peso:             'Perdida de peso (3 meses)',
+  // Features IPRN — inseguridad alimentaria
+  inseg_alimentaria:       'Inseg. alimentaria',
+  inseg_alimentaria_severa:   'Inseg. alimentaria severa',
+  inseg_alimentaria_moderada: 'Inseg. alimentaria moderada',
+  // Features IPRN — salud
+  depresion:               'Depresion',
+  limitacion_fisica:       'Limitacion fisica',
+  movilidad_reducida:      'Movilidad reducida',
+  diabetes:                'Diabetes',
+  hta:                     'Hipertension arterial',
+  // Features IPRN — contexto social
+  vive_solo:               'Vive solo/a',
+  edad_avanzada:           'Edad avanzada (>85)',
+  num_carencias:           'Carencias RSH',
+  hacinamiento:            'Hacinamiento',
+  // Features IPRN — otras
+  ingreso_per_capita:      'Ingreso per capita',
+  acceso_pacam:            'Acceso PACAM',
+  movilidad_num:           'Movilidad',
+  sexo_num:                'Sexo',
+  zona_num:                'Zona',
+}
+
+function _prettyFactor(nombre) {
+  return FACTOR_LABELS[nombre] ||
+    String(nombre).replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase())
+}
+
+/**
+ * Convierte una lista ordenada de nombres de factor (de mayor a menor
+ * importancia) en objetos para la barra, con porcentajes descendentes.
+ * Nota: el endpoint expone los factores ya ordenados pero sin el score numérico
+ * crudo, por lo que la contribución se estima por rango.
+ */
+function factoresDesdeNombres(nombres, nivel) {
+  const lista = (nombres || []).filter(Boolean)
+  const n = lista.length || 1
+  return lista.map((nm, i) => ({
+    nombre: _prettyFactor(nm),
+    pct: Math.max(8, Math.round(45 - i * (33 / Math.max(n - 1, 1)))),
+    nivel,
+  }))
+}
+
+// Inseguridad alimentaria textual → código numérico que espera el modelo.
+const INSEG_COD = { seguro: 0, leve: 1, moderado: 2, severo: 3 }
+
+/** Construye el payload de predicción a partir del detalle del beneficiario. */
+function payloadPrediccion(data) {
+  const payload = {
+    edad: data.edad,
+    sexo: data.sexo,
+    zona: data.zona || 'urbano',
+    depresion: !!data.tiene_depresion,
+    diabetes: !!data.tiene_diabetes,
+    hta: !!data.tiene_hipertension,
+    vive_solo: !!data.vive_solo,
+    acceso_pacam: !!data.acceso_pacam,
+    inseg_alimentaria: INSEG_COD[data.nivel_inseguridad] ?? 0,
+  }
+  if (data.imc != null && data.imc !== '') payload.imc = parseFloat(data.imc)
+  if (data.circunferencia_pantorrilla != null) payload.circ_pantorrilla = parseFloat(data.circunferencia_pantorrilla)
+  // puntaje_mna no se envia: no es una feature del modelo IPRN (ver ml/features.py)
+  return payload
+}
+
 function buildProfile(data) {
-  if (!data) return PATIENT_DETAIL
+  if (!data) {
+    // Hace visible en desarrollo que se está usando el perfil de muestra
+    // (María del Carmen) por falta de respuesta real de la API.
+    console.warn(
+      '[PatientDetail] Sin datos de la API para este beneficiario; ' +
+      'se muestra el perfil de referencia (mock).'
+    )
+    return PATIENT_DETAIL
+  }
   const imc = parseFloat(data.imc) || 0
   const imcLabel = imc < 18.5 ? 'bajo peso' : imc < 25 ? 'normal' : imc < 30 ? 'sobrepeso' : 'obesidad'
   const imcNivel = imc < 18.5 ? 'critico' : imc < 25 ? 'bajo' : 'medio'
   const nivelRiesgo = data.nivel_riesgo || 'medio'
   const prob = parseFloat(data.probabilidad_riesgo) || 0.5
 
-  const factores = [
-    data.factor_1, data.factor_2, data.factor_3,
-  ].filter(Boolean).map((f, i) => ({
-    nombre: f, pct: Math.round((0.45 - i * 0.1) * 100), nivel: nivelRiesgo,
-  }))
-
-  if (factores.length === 0) {
-    factores.push(
-      { nombre: 'Puntaje MNA', pct: 46, nivel: nivelRiesgo },
-      { nombre: 'IMC', pct: 18, nivel: nivelRiesgo },
-      { nombre: 'Inseg. alimentaria', pct: 12, nivel: 'alto' },
-    )
+  // Factores de respaldo (cuando la predicción ML no está disponible): se parte
+  // de factor_1/2/3 de la BD y se complementa con factores clínicos presentes
+  // en los datos, para no mostrar uno solo.
+  // Factores de respaldo en orden de importancia del modelo RF (circ_pantorrilla > imc).
+  // Se usa cuando la prediccion ML no esta disponible o no retorna factores.
+  const nombresDb = [data.factor_1, data.factor_2, data.factor_3].filter(Boolean)
+  const candidatos = [...nombresDb]
+  if (data.circunferencia_pantorrilla != null) candidatos.push('circ_pantorrilla')
+  if (data.imc != null) candidatos.push('imc')
+  if (data.nivel_inseguridad && data.nivel_inseguridad !== 'seguro') {
+    candidatos.push('inseg_alimentaria')
   }
+  if (data.tiene_depresion) candidatos.push('depresion')
+  if (data.vive_solo) candidatos.push('vive_solo')
+  if (data.tiene_diabetes) candidatos.push('diabetes')
+  const nombresUnicos = [...new Set(candidatos)].slice(0, 5)
+  const factores = factoresDesdeNombres(
+    nombresUnicos.length ? nombresUnicos : ['circ_pantorrilla', 'imc', 'inseg_alimentaria'],
+    nivelRiesgo,
+  )
 
   return {
     iniciales: `B${data.id}`,
@@ -49,9 +141,16 @@ function buildProfile(data) {
       : 'Continuar monitoreo mensual habitual',
     telefono: '—',
     direccion: `${data.zona || ''} · ${data.comuna || ''}`,
-    mnaPuntaje: data.puntaje_elcsa || 8,
-    mnaEstado: nivelRiesgo,
-    mnaEstadoLabel: nivelRiesgo === 'alto' ? 'Desnutricion' : nivelRiesgo === 'medio' ? 'Riesgo' : 'Normal',
+    // iprnScore: proxy observable (0-1) calculado por el modelo RF.
+    // Reemplaza al puntaje MNA clinico, no disponible en fuentes reales.
+    iprnScore: prob.toFixed(3),
+    estadoNutricional: nivelRiesgo,
+    estadoNutricionalLabel: {
+      critico: 'Riesgo critico (IPRN >= 0.62)',
+      alto:    'Riesgo alto (IPRN >= 0.42)',
+      medio:   'Riesgo medio (IPRN >= 0.22)',
+      bajo:    'Sin riesgo significativo',
+    }[nivelRiesgo] || 'Riesgo medio',
     factoresRiesgo: factores,
     comorbilidades: [
       { nombre: 'Diabetes mellitus', valor: data.tiene_diabetes ? 'Sí' : 'No', nivel: data.tiene_diabetes ? 'alto' : null },
@@ -91,6 +190,8 @@ export default function PatientDetail() {
   const [contacto, setContacto] = useState('exitoso')
   const [seguimiento, setSeguimiento] = useState('15')
   const [nota, setNota] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [msgVisita, setMsgVisita] = useState(null)   // { tipo: 'ok'|'error', texto }
 
   useEffect(() => {
     if (id && !isNaN(Number(id))) {
@@ -98,11 +199,22 @@ export default function PatientDetail() {
         if (error || !data) {
           setP(buildProfile(null))
           setIsMock(true)
-        } else {
-          setP(buildProfile(data))
-          setIsMock(false)
+          setLoading(false)
+          return
         }
+        const perfil = buildProfile(data)
+        setP(perfil)
+        setIsMock(false)
         setLoading(false)
+        // Segunda llamada: factores de riesgo con scores del modelo ML.
+        predictRiesgo(payloadPrediccion(data)).then(({ data: pred, error: e }) => {
+          if (!e && pred?.factores_principales?.length) {
+            const factores = factoresDesdeNombres(
+              pred.factores_principales, pred.riesgo || perfil.nivelRiesgo,
+            )
+            setP(prev => (prev ? { ...prev, factoresRiesgo: factores } : prev))
+          }
+        })
       })
     } else {
       setP(buildProfile(null))
@@ -111,10 +223,34 @@ export default function PatientDetail() {
     }
   }, [id])
 
+  async function handleGuardarVisita() {
+    if (!nota.trim()) {
+      setMsgVisita({ tipo: 'error', texto: 'Ingresa una observación antes de guardar' })
+      return
+    }
+    setGuardando(true)
+    setMsgVisita(null)
+    const { data, error } = await registrarVisita(id, {
+      contacto,
+      nota: nota.trim(),
+      seguimiento_dias: parseInt(seguimiento, 10) || null,
+    })
+    setGuardando(false)
+    if (error || !data?.ok) {
+      setMsgVisita({ tipo: 'error', texto: 'Error al guardar. Intenta nuevamente.' })
+      return
+    }
+    setMsgVisita({ tipo: 'ok', texto: 'Registro guardado correctamente' })
+    setNota('')
+    setContacto('exitoso')
+    setSeguimiento('15')
+    setTimeout(() => setMsgVisita(null), 3000)
+  }
+
   if (loading) {
     return (
       <div className="page-detail">
-        <TopBar subtitle="Vista detalle · Operador JUNAEB" showBack />
+        <TopBar subtitle="Vista detalle · Operador JUNAEB" />
         <div style={{ padding: 60, textAlign: 'center', color: 'var(--ink-soft)', fontFamily: 'var(--mono)' }}>
           Cargando perfil…
         </div>
@@ -124,7 +260,7 @@ export default function PatientDetail() {
 
   return (
     <div className="page-detail">
-      <TopBar subtitle="Vista detalle · Operador JUNAEB" showBack />
+      <TopBar subtitle="Vista detalle · Operador JUNAEB" />
 
       <div className="profile-layout">
         <aside className="profile-sidebar">
@@ -143,7 +279,7 @@ export default function PatientDetail() {
             <div className="risk-card-label">Score de riesgo predicho · Modelo ML v1.0</div>
             <div className="risk-big">{p.scoreRiesgo}<sup>/ 1.0</sup></div>
             <div style={{ marginTop: 10 }}>
-              <span className={`pill ${p.nivelRiesgo}`}>● Riesgo {p.nivelRiesgo}</span>
+              <span className={`pill ${p.nivelRiesgo}`}>Riesgo {p.nivelRiesgo}</span>
             </div>
             <div className="risk-gauge">
               <div className="gauge-track">
@@ -155,7 +291,7 @@ export default function PatientDetail() {
             </div>
             <div className="risk-recomendacion">
               <div className="recom-label">Recomendacion automatica</div>
-              <div className="recom-text">⚠ {p.recomendacion}</div>
+              <div className="recom-text">{p.recomendacion}</div>
             </div>
           </div>
 
@@ -217,7 +353,7 @@ export default function PatientDetail() {
                   <div className="stat-row">
                     <span className="k">Estado nutricional</span>
                     <span className="v">
-                      <span className={`pill ${p.mnaEstado}`}>{p.mnaEstadoLabel}</span>
+                      <span className={`pill ${p.estadoNutricional}`}>{p.estadoNutricionalLabel}</span>
                     </span>
                   </div>
                 </div>
@@ -293,9 +429,9 @@ export default function PatientDetail() {
                   <label>Estado del contacto</label>
                   <div className="radio-pills">
                     {[
-                      { val: 'exitoso', label: '✓ Contacto exitoso' },
-                      { val: 'no-encontrado', label: '✗ No encontrado/a' },
-                      { val: 'rechazo', label: '⊘ Rechazo atencion' },
+                      { val: 'exitoso', label: 'Contacto exitoso' },
+                      { val: 'no-encontrado', label: 'No encontrado/a' },
+                      { val: 'rechazo', label: 'Rechazo atencion' },
                     ].map(opt => (
                       <span key={opt.val}
                         className={`r-pill ${contacto === opt.val ? 'active' : ''}`}
@@ -328,11 +464,22 @@ export default function PatientDetail() {
                     ))}
                   </div>
                 </div>
+                {msgVisita && (
+                  <div className="form-group" style={{
+                    color: msgVisita.tipo === 'ok' ? 'var(--bajo)' : 'var(--critico)',
+                    fontSize: 13, fontWeight: 600,
+                  }}>
+                    {msgVisita.texto}
+                  </div>
+                )}
                 <div className="form-footer">
                   <div className="form-meta">
                     <span>Beneficiario ID: {id} · Zona: {p.zona}</span>
                   </div>
-                  <button className="btn btn-primary">Guardar registro</button>
+                  <button className="btn btn-primary"
+                    onClick={handleGuardarVisita} disabled={guardando}>
+                    {guardando ? 'Guardando...' : 'Guardar registro'}
+                  </button>
                 </div>
               </div>
             </div>

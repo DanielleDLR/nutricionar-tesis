@@ -43,11 +43,14 @@ export const RISK_COLORS = {
   bajo:    "#2C5530",
 };
 
+// KPI_DATA: fallback cuando la API no responde.
+// Valores calibrados con dataset sintetico piloto (seed=42, n=1200, IPRN).
+// La API en vivo reemplaza estos valores via buildKpis() en KPIStrip.jsx.
 export const KPI_DATA = [
-  { label: "Desnutrición establecida",    value: "5,6", unit: "%", delta: "▲ 0,3 pp vs 2024", deltaType: "up",    type: "danger" },
-  { label: "Riesgo de desnutrición",      value: "32,3", unit: "%", delta: "▼ 1,1 pp vs 2024", deltaType: "down",  type: "warn" },
-  { label: "Inseguridad alimentaria severa", value: "7,2", unit: "%", delta: "— sin cambios",  deltaType: "neutral", type: "neutral" },
-  { label: "No-retiro PACAM (de inscritos)", value: "62", unit: "%", delta: "▲ 4 pp vs 2024", deltaType: "up",    type: "warn" },
+  { label: "Riesgo alto · Maule",       value: "29,5", unit: "%", delta: "354 personas (piloto)",   deltaType: "neutral", type: "danger" },
+  { label: "Riesgo critico · Maule",    value: "16,7", unit: "%", delta: "200 personas (piloto)",   deltaType: "neutral", type: "danger" },
+  { label: "Inseg. alimentaria",        value: "23,7", unit: "%", delta: "moderada + severa · IPRN", deltaType: "neutral", type: "neutral" },
+  { label: "Beneficiarios PACAM",       value: "39,4", unit: "%", delta: "del total evaluado",       deltaType: "neutral", type: "neutral" },
 ];
 
 export const NON_RETIRERS = [
@@ -76,31 +79,35 @@ export const PATIENT_DETAIL = {
   recomendacion: "Derivar a nutricionista APS de forma prioritaria",
   telefono: "+56 9 7234 ****",
   direccion: "Camino Vecinal s/n, Curepto, Maule",
-  mnaPuntaje: 6,
-  mnaEstado: "critico",
-  mnaEstadoLabel: "Desnutrición establecida",
+  // iprnScore reemplaza a mnaPuntaje: el IPRN es el proxy observable
+  // (0-1) construido desde variables de encuesta disponibles en ENS/CASEN.
+  // El puntaje MNA clinico (0-30) NO esta disponible en datos reales.
+  iprnScore: 0.82,
+  estadoNutricional: "critico",
+  estadoNutricionalLabel: "Riesgo critico (IPRN >= 0.62)",
   comorbilidades: [
-    { nombre: "Diabetes",           valor: "Sí",  nivel: "critico" },
-    { nombre: "Hipertensión",        valor: "Sí",  nivel: "alto" },
-    { nombre: "Depresión",           valor: "Sí",  nivel: "alto" },
-    { nombre: "Demencia",            valor: "No",  nivel: null },
-    { nombre: "Osteoporosis",        valor: "Sí",  nivel: "alto" },
-    { nombre: "Pérdida dentaria",    valor: "Sí",  nivel: "alto" },
-    { nombre: "Dificultad visual",   valor: "Sí",  nivel: "alto" },
-    { nombre: "Limitación física",   valor: "Sí",  nivel: "critico" },
-    { nombre: "Necesita ayuda AVD",  valor: "Sí",  nivel: "critico" },
+    { nombre: "Diabetes mellitus",   valor: "Si",  nivel: "critico" },
+    { nombre: "Hipertension",         valor: "Si",  nivel: "alto" },
+    { nombre: "Depresion",            valor: "Si",  nivel: "alto" },
+    { nombre: "Limitacion fisica",    valor: "Si",  nivel: "critico" },
+    { nombre: "Osteoporosis",         valor: "Si",  nivel: "alto" },
+    { nombre: "Perdida dentaria",     valor: "Si",  nivel: "alto" },
+    { nombre: "Dificultad visual",    valor: "Si",  nivel: "alto" },
+    { nombre: "Necesita ayuda AVD",   valor: "Si",  nivel: "critico" },
   ],
   laboratorio: [
-    { nombre: "Albúmina sérica",   valor: "2.9 g/dL",  nota: "(<3.5)", nivel: "critico" },
+    { nombre: "Albumina serica",   valor: "2.9 g/dL",  nota: "(<3.5)", nivel: "critico" },
     { nombre: "Hemoglobina",       valor: "10.8 g/dL", nota: "(<12)",  nivel: "alto" },
     { nombre: "Glucosa ayunas",    valor: "178 mg/dL", nota: "",       nivel: "alto" },
   ],
+  // factoresRiesgo: feature importance del modelo RF (IPRN).
+  // circ_pantorrilla es la feature mas importante (24.2%), seguida de imc (20.8%).
   factoresRiesgo: [
-    { nombre: "Demencia / depresión",     pct: 92, nivel: "critico" },
-    { nombre: "Limitación física (AVD)",  pct: 78, nivel: "critico" },
-    { nombre: "Inseg. alimentaria severa",pct: 71, nivel: "alto" },
-    { nombre: "Pérdida dentaria",         pct: 56, nivel: "alto" },
-    { nombre: "Ingreso per cápita bajo",  pct: 48, nivel: "medio" },
+    { nombre: "Circ. pantorrilla baja",   pct: 88, nivel: "critico" },
+    { nombre: "Limitacion fisica",        pct: 74, nivel: "critico" },
+    { nombre: "Inseg. alimentaria severa",pct: 65, nivel: "alto" },
+    { nombre: "Depresion",                pct: 52, nivel: "alto" },
+    { nombre: "Ingreso per capita bajo",  pct: 40, nivel: "medio" },
   ],
   pacamEstado: "alto",
   pacamEstadoLabel: "Beneficiaria inscrita · No retira",

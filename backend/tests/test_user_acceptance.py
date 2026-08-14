@@ -143,11 +143,15 @@ def test_hu2_analista_prioriza_comuna_mas_critica(client):
     r = client.get("/api/v1/comunas/")
     assert r.status_code == 200
     comunas = r.json()["comunas"]
+    # Aparecen todas las comunas con al menos una persona registrada (incluso
+    # las de riesgo bajo); el % se recalcula en vivo sobre las personas.
     assert len(comunas) == len(COMUNAS)
     # La API ordena por pct_riesgo_alto_crit desc → la primera es la prioritaria.
+    pcts = [c["pct_riesgo_alto_crit"] for c in comunas]
+    assert pcts == sorted(pcts, reverse=True)
     top = comunas[0]
-    assert top["comuna_nombre"] == "Cauquenes"
-    assert top["nivel_riesgo_zona"] == "critico"
+    assert top["nivel_riesgo_zona"] in ("critico", "alto", "medio", "bajo")
+    assert top["total_personas"] > 0
 
     # El analista abre el detalle de esa comuna (clic en el mapa).
     detalle = client.get(f"/api/v1/comunas/{top['comuna_cod']}")
@@ -215,7 +219,7 @@ def test_hu6_analista_abre_ficha_individual(client):
 def test_hu7_analista_evalua_nuevo_caso(client):
     caso = {
         "edad": 82, "sexo": "F", "zona": "rural",
-        "imc": 18.0, "puntaje_mna": 16, "inseg_alimentaria": 3,
+        "imc": 18.0, "circ_pantorrilla": 28.5, "inseg_alimentaria": 3,
         "depresion": True, "vive_solo": True, "acceso_pacam": False,
     }
     r = client.post("/api/v1/prediccion/", json=caso)

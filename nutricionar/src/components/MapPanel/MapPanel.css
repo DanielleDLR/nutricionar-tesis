@@ -75,11 +75,21 @@
 .map-wrap {
   display: grid;
   grid-template-columns: 1fr 320px;
+  position: relative;
+  overflow: hidden;
+  /* Aísla los z-index internos de Leaflet (hasta 1000) para que sus controles
+     no se superpongan a la barra superior fija al hacer scroll. */
+  isolation: isolate;
 }
 
 .leaflet-map {
   height: 540px;
   background: var(--bg-soft);
+  /* Crea un contexto de apilamiento propio para que los paneles de Leaflet
+     (z-index hasta 1000) no se desborden sobre la barra superior fija al
+     hacer scroll. */
+  position: relative;
+  z-index: 0;
 }
 
 .map-side {

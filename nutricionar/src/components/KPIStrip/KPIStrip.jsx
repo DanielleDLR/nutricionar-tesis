@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import './KPIStrip.css'
 import { KPI_DATA } from '../../data/mockData'
-import { getResumen } from '../../services/api'
+import { getResumen, filtersToParams } from '../../services/api'
 
 /** Convierte la respuesta del endpoint /resumen en el formato de KPI_DATA */
 function buildKpis(resumen) {
@@ -23,7 +23,7 @@ function buildKpis(resumen) {
       label:     'Riesgo medio · Maule',
       value:     pctMedio,
       unit:      '%',
-      delta:     'categoría MNA',
+      delta:     'indice IPRN',
       deltaType: 'neutral',
       type:      'warn',
     },
@@ -46,14 +46,17 @@ function buildKpis(resumen) {
   ]
 }
 
-export default function KPIStrip() {
+export default function KPIStrip({ filters = {} }) {
   const [kpis,    setKpis]    = useState(KPI_DATA)
   const [loading, setLoading] = useState(true)
   const [apiOk,   setApiOk]   = useState(false)
 
+  const params = filtersToParams(filters)
+
   useEffect(() => {
     let cancelled = false
-    getResumen().then(({ data, error }) => {
+    setLoading(true)
+    getResumen(params).then(({ data, error }) => {
       if (cancelled) return
       if (data && !error) {
         setKpis(buildKpis(data))
@@ -62,7 +65,8 @@ export default function KPIStrip() {
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(params)])
 
   return (
     <div className="kpis">

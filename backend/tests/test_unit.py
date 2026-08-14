@@ -52,8 +52,9 @@ class TestCache:
 # ─── Ingeniería de features ──────────────────────────────────
 class TestFeatures:
     def test_longitud_vector(self):
+        # 17 features: puntaje_mna eliminado (no disponible en datos reales)
         vec = build_feature_vector({})
-        assert len(vec) == len(FEATURE_NAMES) == 18
+        assert len(vec) == len(FEATURE_NAMES) == 17
 
     def test_sexo_femenino_codifica_1(self):
         vec = build_feature_vector({"sexo": "F"})
@@ -73,37 +74,42 @@ class TestFeatures:
         assert vec[FEATURE_NAMES.index("inseg_alimentaria")] == 3.0
 
     def test_valores_invalidos_usan_fallback(self):
-        # Un IMC no numérico no debe romper la construcción del vector
+        # Un IMC no numerico no debe romper la construccion del vector
         vec = build_feature_vector({"imc": "no-numerico", "edad": None})
-        assert len(vec) == 18
+        assert len(vec) == 17
         assert all(v == v for v in vec)  # sin NaN
 
 
-# ─── Heurística de fallback del modelo ───────────────────────
+# ─── Heuristica de fallback del modelo (IPRN) ────────────────
 class TestHeuristica:
     def test_caso_alto_riesgo(self):
-        """MNA bajo + IMC bajo + inseguridad severa → alto/critico."""
+        """IMC bajo + circ_pantorrilla baja + inseguridad severa -> alto/critico."""
         nivel, prob, factores = _heuristic_predict({
-            "puntaje_mna": 15, "imc": 17.0, "inseg_alimentaria": "severo",
+            "imc": 17.0, "circ_pantorrilla": 28.0,
+            "inseg_alimentaria": "severo",
             "depresion": True, "vive_solo": True,
         })
         assert nivel in ("alto", "critico")
         assert prob > 0.3
-        assert "puntaje_mna_bajo" in factores
+        assert "imc_bajo_peso" in factores
 
     def test_caso_bajo_riesgo(self):
-        """Persona sana, bien nutrida → riesgo bajo."""
+        """Persona bien nutrida, sin factores de riesgo -> riesgo bajo."""
         nivel, prob, factores = _heuristic_predict({
-            "puntaje_mna": 28, "imc": 25.0, "inseg_alimentaria": 0,
+            "imc": 25.0, "circ_pantorrilla": 35.0,
+            "inseg_alimentaria": 0,
         })
         assert nivel == "bajo"
-        assert prob < 0.15
+        assert prob < 0.22
 
     def test_probabilidad_acotada(self):
+        """Score IPRN siempre acotado entre 0 y 1."""
         nivel, prob, factores = _heuristic_predict({
-            "puntaje_mna": 5, "imc": 14, "inseg_alimentaria": "severo",
-            "depresion": True, "limitacion_fisica": True,
-            "diabetes": True, "vive_solo": True,
+            "imc": 14.0, "circ_pantorrilla": 27.0,
+            "inseg_alimentaria": "severo",
+            "perdio_peso": True, "depresion": True,
+            "limitacion_fisica": True, "diabetes": True,
+            "vive_solo": True, "movilidad": 0,
         })
         assert 0.0 <= prob <= 1.0
         assert len(factores) <= 5

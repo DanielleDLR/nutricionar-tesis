@@ -110,6 +110,18 @@ def test_beneficiarios_filtro_no_retira(client):
     assert "items" in data
 
 
+def test_beneficiarios_motivos_no_retiro(client):
+    response = client.get("/api/v1/beneficiarios/no-retiro/motivos")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total" in data
+    assert "motivos" in data
+    for m in data["motivos"]:
+        assert "label" in m
+        assert "n" in m
+        assert "pct" in m
+
+
 def test_beneficiario_detalle(client):
     # Pedir un ID que no existe — 404
     response = client.get("/api/v1/beneficiarios/999999")

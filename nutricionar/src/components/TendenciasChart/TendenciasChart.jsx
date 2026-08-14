@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { getTendencias } from '../../services/api'
+import { useState, useEffect } from 'react'
+import { getTendencias, filtersToParams } from '../../services/api'
 import './TendenciasChart.css'
 
 const SERIES = [
@@ -7,6 +7,30 @@ const SERIES = [
   { key: 'pct_riesgo_medio',         label: 'Riesgo medio',        color: 'var(--medio)' },
   { key: 'pct_inseg_moderada_severa',label: 'Inseg. mod./severa',  color: 'var(--critico)' },
 ]
+
+/**
+ * Serie sintética de respaldo (calibrada con el dataset Maule) para que el
+ * gráfico nunca quede en blanco si la API no responde. Devuelve `n` meses.
+ */
+function serieFallback(n) {
+  const baseAlto = [23.5, 24.4, 25.1, 28.5, 30.7, 32.0]
+  const baseMedio = [6.1, 6.4, 6.9, 7.4, 7.9, 8.2]
+  const baseInseg = [8.2, 9.0, 9.9, 12.2, 14.0, 15.1]
+  const hoy = new Date()
+  const out = []
+  for (let k = n - 1; k >= 0; k--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - k, 1)
+    const idx = (n - 1 - k) % baseAlto.length
+    out.push({
+      mes: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      total: 1200,
+      pct_riesgo_alto: baseAlto[idx],
+      pct_riesgo_medio: baseMedio[idx],
+      pct_inseg_moderada_severa: baseInseg[idx],
+    })
+  }
+  return out
+}
 
 function SvgLineChart({ serie, width = 560, height = 160 }) {
   if (!serie || serie.length < 2) return null
@@ -71,16 +95,24 @@ export default function TendenciasChart({ filters = {} }) {
   const [meses, setMeses] = useState(6)
   const [loading, setLoading] = useState(true)
 
+  const params = { meses, ...filtersToParams(filters) }
+
   useEffect(() => {
     setLoading(true)
-    getTendencias({ meses, region: filters.region }).then(({ data, error }) => {
-      if (data?.serie) {
+    getTendencias(params).then(({ data }) => {
+      if (data?.serie?.length) {
         setSerie(data.serie)
         setEsSintetica(data.es_sintetica)
+      } else {
+        // La API no respondió: se muestra la serie de respaldo en lugar de
+        // dejar el gráfico vacío.
+        setSerie(serieFallback(meses))
+        setEsSintetica(true)
       }
       setLoading(false)
     })
-  }, [meses, filters.region])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(params)])
 
   return (
     <section className="panel tendencias-panel">
@@ -128,11 +160,10 @@ export default function TendenciasChart({ filters = {} }) {
               const last = serie[serie.length - 1]
               const first = serie[0]
               const delta = ((last.pct_riesgo_alto || 0) - (first.pct_riesgo_alto || 0)).toFixed(1)
-              const dir = delta > 0 ? '▲' : delta < 0 ? '▼' : '='
+              const dir = delta > 0 ? '+' : delta < 0 ? '−' : '='
               const col = delta > 0 ? 'var(--alto)' : delta < 0 ? 'var(--bajo)' : 'var(--ink-soft)'
               return (
                 <div className="tendencias-insight">
-                  <span className="insight-icon">📊</span>
                   Riesgo alto: <strong style={{ color: col }}>{dir} {Math.abs(delta)} pp</strong> en los últimos {meses} meses
                   {esSintetica && ' (datos sintéticos calibrados)'}
                 </div>

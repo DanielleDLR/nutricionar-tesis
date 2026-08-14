@@ -1,73 +1,112 @@
 {
-  "cv_f1_macro_mean": 0.7364,
-  "cv_f1_macro_std": 0.0174,
-  "confusion_matrix": [
-    [
-      135,
-      3,
-      0,
-      0
-    ],
-    [
-      20,
-      400,
-      17,
-      0
-    ],
-    [
-      0,
-      26,
-      385,
-      11
-    ],
-    [
-      0,
-      0,
-      3,
-      200
-    ]
-  ],
   "label_names": [
     "bajo",
     "medio",
     "alto",
     "critico"
   ],
-  "feature_importances": {
-    "edad": 0.049414714888259284,
-    "sexo_num": 0.00811676439285501,
-    "zona_num": 0.005004403041549802,
-    "ingreso_per_capita": 0.03961112440592417,
-    "num_carencias": 0.036140144639817684,
-    "hacinamiento": 0.004417920160191704,
-    "imc": 0.1123721739216001,
-    "circ_pantorrilla": 0.1794854062477568,
-    "puntaje_mna": 0.3457974512608115,
-    "perdio_peso": 0.0402762589626131,
-    "diabetes": 0.011410110513650552,
-    "hta": 0.009550866169650181,
-    "depresion": 0.01850483654626717,
-    "limitacion_fisica": 0.026564501525198556,
-    "inseg_alimentaria": 0.07044969979328247,
-    "acceso_pacam": 0.006929327459662711,
-    "movilidad_num": 0.023671577882071113,
-    "vive_solo": 0.012282718188838077
+  "cv_f1_macro_mean": 0.7036,
+  "cv_f1_macro_std": 0.0149,
+  "cv_f1_macro_per_fold": [
+    0.691,
+    0.6949,
+    0.7232,
+    0.7202,
+    0.689
+  ],
+  "dt_cv_f1_macro_mean": 0.6147,
+  "dt_cv_f1_macro_per_fold": [
+    0.605,
+    0.6221,
+    0.6262,
+    0.6144,
+    0.6059
+  ],
+  "cv_accuracy": 0.6883,
+  "classification_report_cv": {
+    "bajo": {
+      "precision": 0.7603,
+      "recall": 0.8519,
+      "f1-score": 0.8035,
+      "support": 216.0
+    },
+    "medio": {
+      "precision": 0.701,
+      "recall": 0.6488,
+      "f1-score": 0.6739,
+      "support": 430.0
+    },
+    "alto": {
+      "precision": 0.6052,
+      "recall": 0.5932,
+      "f1-score": 0.5991,
+      "support": 354.0
+    },
+    "critico": {
+      "precision": 0.7183,
+      "recall": 0.765,
+      "f1-score": 0.7409,
+      "support": 200.0
+    },
+    "accuracy": 0.6883,
+    "macro avg": {
+      "precision": 0.6962,
+      "recall": 0.7147,
+      "f1-score": 0.7044,
+      "support": 1200.0
+    },
+    "weighted avg": {
+      "precision": 0.6863,
+      "recall": 0.6883,
+      "f1-score": 0.6863,
+      "support": 1200.0
+    }
   },
-  "dt_train_accuracy": 0.7783,
-  "rf_train_accuracy": 0.9333,
+  "confusion_matrix": [
+    [184, 30, 2, 0],
+    [58, 279, 91, 2],
+    [0, 86, 210, 58],
+    [0, 3, 44, 153]
+  ],
+  "confusion_matrix_train": [
+    [204, 11, 1, 0],
+    [35, 360, 34, 1],
+    [0, 11, 328, 15],
+    [0, 1, 3, 196]
+  ],
+  "feature_importances": {
+    "edad": 0.06729637508135775,
+    "sexo_num": 0.009506717039213417,
+    "zona_num": 0.008447673204984778,
+    "ingreso_per_capita": 0.055655799629779255,
+    "num_carencias": 0.06158149934708908,
+    "hacinamiento": 0.008102420449595606,
+    "imc": 0.20755970340345462,
+    "circ_pantorrilla": 0.24235119983752268,
+    "perdio_peso": 0.08985228382432137,
+    "diabetes": 0.014146801872855464,
+    "hta": 0.013206280323574194,
+    "depresion": 0.04771628593939667,
+    "limitacion_fisica": 0.039267638694192364,
+    "inseg_alimentaria": 0.07999345499926293,
+    "acceso_pacam": 0.010667949226390586,
+    "movilidad_num": 0.028389025427459077,
+    "vive_solo": 0.016258891699550145
+  },
+  "dt_train_accuracy": 0.7408,
+  "rf_train_accuracy": 0.9067,
   "n_samples": 1200,
   "class_distribution": {
-    "medio": 437,
-    "alto": 422,
-    "critico": 203,
-    "bajo": 138
+    "medio": 430,
+    "alto": 354,
+    "bajo": 216,
+    "critico": 200
   },
   "medians": {
     "edad": 78.0,
     "ingreso_per_capita": 258257.0,
     "imc": 25.3,
     "circ_pantorrilla": 32.4,
-    "puntaje_mna": 22.9,
     "num_carencias": 2.0
   }
 }

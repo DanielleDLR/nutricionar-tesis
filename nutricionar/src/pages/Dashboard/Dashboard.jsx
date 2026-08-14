@@ -12,6 +12,9 @@ export default function Dashboard() {
   const [filters, setFilters] = useState({
     region: '07',
     nivelRiesgo: undefined,
+    // Espejo del estado inicial del FilterSidebar (Crítico + Alto activos),
+    // para que el mapa filtre igual desde el primer render.
+    nivelesRiesgo: ['critico', 'alto'],
     sexos: ['F', 'M'],
     grupos: ['65-74', '75-84', '85+'],
   })
@@ -22,8 +25,8 @@ export default function Dashboard() {
 
   return (
     <div className="page-dashboard">
-      <a href="#contenido-principal" className="skip-link">Saltar al contenido</a>
-      <TopBar />
+      <a href="#dashboard-main" className="skip-link">Saltar al contenido</a>
+      <TopBar filters={filters} />
 
       <section className="hero">
         <div className="breadcrumb">
@@ -47,7 +50,7 @@ export default function Dashboard() {
       <div className="dash-layout">
         <FilterSidebar onFiltersChange={handleFiltersChange} />
 
-        <main id="contenido-principal" className="dash-main">
+        <main id="dashboard-main" className="dash-main">
           <KPIStrip filters={filters} />
           <MapPanel filters={filters} />
           <TendenciasChart filters={filters} />

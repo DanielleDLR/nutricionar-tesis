@@ -54,6 +54,9 @@ CREATE TABLE IF NOT EXISTS personas (
     puntaje_elcsa               SMALLINT        CHECK (puntaje_elcsa BETWEEN 0 AND 15),
     nivel_inseguridad           VARCHAR(10)     CHECK (nivel_inseguridad IN ('seguro', 'leve', 'moderado', 'severo')),
 
+    -- Adherencia a programas: motivo declarado de no retiro del beneficio PACAM
+    motivo_no_retiro            VARCHAR(20),
+
     -- Metadatos
     fuente                      VARCHAR(20)     CHECK (fuente IN ('CASEN', 'ENS', 'SINTETICO')),
     anio_encuesta               SMALLINT
@@ -93,6 +96,8 @@ CREATE TABLE IF NOT EXISTS comunas_resumen (
     comuna_cod              CHAR(5)         NOT NULL UNIQUE,
     comuna_nombre           VARCHAR(100)    NOT NULL,
     region_cod              CHAR(2)         NOT NULL,
+    lat                     FLOAT,
+    lon                     FLOAT,
     total_personas          INTEGER         DEFAULT 0,
     n_desnutricion          INTEGER         DEFAULT 0,
     n_riesgo                INTEGER         DEFAULT 0,

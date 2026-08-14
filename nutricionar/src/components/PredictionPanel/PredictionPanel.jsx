@@ -3,14 +3,13 @@ import { predictRiesgo } from '../../services/api'
 import './PredictionPanel.css'
 
 const RIESGO_CONFIG = {
-  bajo:    { label: 'Bajo',    color: 'var(--bajo)',    icon: '✓' },
-  medio:   { label: 'Medio',   color: 'var(--medio)',   icon: '⚠' },
-  alto:    { label: 'Alto',    color: 'var(--alto)',    icon: '▲' },
-  critico: { label: 'Crítico', color: 'var(--critico)', icon: '●' },
+  bajo:    { label: 'Bajo',    color: 'var(--bajo)' },
+  medio:   { label: 'Medio',   color: 'var(--medio)' },
+  alto:    { label: 'Alto',    color: 'var(--alto)' },
+  critico: { label: 'Crítico', color: 'var(--critico)' },
 }
 
 const FACTOR_LABELS = {
-  puntaje_mna:       'Puntaje MNA',
   imc:               'IMC',
   inseg_alimentaria: 'Inseguridad alimentaria',
   depresion:         'Depresión',
@@ -30,7 +29,6 @@ const INITIAL_FORM = {
   sexo: 'F',
   zona: 'urbano',
   imc: '',
-  puntaje_mna: '',
   circ_pantorrilla: '',
   perdio_peso: false,
   diabetes: false,
@@ -94,12 +92,11 @@ export default function PredictionPanel() {
     <section className="prediction-panel">
       <div className="prediction-header" onClick={() => setOpen(o => !o)}>
         <div className="prediction-title">
-          <span className="prediction-icon">⚕</span>
           Evaluación de riesgo individual
-          <small>modelo RandomForest · 18 variables</small>
+          <small>modelo RandomForest · 17 variables</small>
         </div>
         <button className="prediction-toggle" aria-label="Expandir/Colapsar">
-          {open ? '▲' : '▼'}
+          {open ? '−' : '+'}
         </button>
       </div>
 
@@ -166,13 +163,6 @@ export default function PredictionPanel() {
                 </label>
 
                 <label>
-                  Puntaje MNA (0–30)
-                  <input type="number" name="puntaje_mna" min="0" max="30" step="0.5"
-                    placeholder="ej. 21"
-                    value={form.puntaje_mna} onChange={handleChange} />
-                </label>
-
-                <label>
                   Circ. pantorrilla (cm)
                   <input type="number" name="circ_pantorrilla" min="10" max="60" step="0.5"
                     placeholder="ej. 33"
@@ -204,7 +194,7 @@ export default function PredictionPanel() {
 
             <div className="pred-actions">
               <button type="submit" className="btn-predict" disabled={loading}>
-                {loading ? 'Calculando…' : '⚕ Evaluar riesgo'}
+                {loading ? 'Calculando…' : 'Evaluar riesgo'}
               </button>
               <button type="button" className="btn-reset" onClick={handleReset}>
                 Limpiar
@@ -215,14 +205,13 @@ export default function PredictionPanel() {
           {/* Resultado */}
           {error && (
             <div className="pred-error">
-              <span>⚠ {error}</span>
+              <span>{error}</span>
             </div>
           )}
 
           {result && cfg && (
             <div className="pred-result" style={{ borderColor: cfg.color }}>
               <div className="result-badge" style={{ background: cfg.color }}>
-                <span className="result-icon">{cfg.icon}</span>
                 <span className="result-label">Riesgo {cfg.label}</span>
               </div>
 
@@ -268,7 +257,7 @@ export default function PredictionPanel() {
 
                 {result.usa_fallback && (
                   <div className="fallback-notice">
-                    ℹ Predicción calculada con heurística clínica (modelo ML no disponible)
+                    Predicción calculada con heurística clínica (modelo ML no disponible)
                   </div>
                 )}
               </div>

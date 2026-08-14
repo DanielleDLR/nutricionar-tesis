@@ -1,26 +1,28 @@
 import { useState, useEffect } from 'react'
-import { getStats, getMotivosNoRetiro } from '../../services/api'
+import { getStats, getMotivosNoRetiro, filtersToParams } from '../../services/api'
 import './StatsPanel.css'
 
-// Datos sinteticos de fallback (calibrados con dataset Maule)
+// Datos sinteticos de fallback (calibrados con dataset piloto Maule, seed=42, n=1200)
+// Fuente: backend/scripts/generar_dataset_sintetico.py + metrics.json
+// IPRN thresholds: critico>=0.62, alto>=0.42, medio>=0.22, bajo<0.22
 const MOCK_STATS = {
   distribucion_riesgo: [
-    { nivel: 'critico', n: 92,  pct: 7.7 },
-    { nivel: 'alto',    n: 363, pct: 30.3 },
-    { nivel: 'medio',   n: 81,  pct: 6.7 },
-    { nivel: 'bajo',    n: 664, pct: 55.3 },
+    { nivel: 'critico', n: 200, pct: 16.7 },
+    { nivel: 'alto',    n: 354, pct: 29.5 },
+    { nivel: 'medio',   n: 430, pct: 35.8 },
+    { nivel: 'bajo',    n: 216, pct: 18.0 },
   ],
   distribucion_inseguridad: [
-    { nivel: 'seguro',   n: 901, pct: 75.1 },
-    { nivel: 'leve',     n: 158, pct: 13.2 },
-    { nivel: 'moderado', n: 54,  pct: 4.5 },
-    { nivel: 'severo',   n: 87,  pct: 7.2 },
+    { nivel: 'seguro',   n: 660, pct: 55.0 },
+    { nivel: 'leve',     n: 240, pct: 20.0 },
+    { nivel: 'moderado', n: 195, pct: 16.2 },
+    { nivel: 'severo',   n: 105, pct: 8.8 },
   ],
   comorbilidades: [
-    { nombre: 'Hipertension arterial', pct: 60 },
-    { nombre: 'Diabetes mellitus',     pct: 28 },
-    { nombre: 'Depresion',             pct: 19 },
-    { nombre: 'Limitacion fisica',     pct: 27 },
+    { nombre: 'Hipertension arterial', pct: 50.8 },
+    { nombre: 'Diabetes mellitus',     pct: 27.5 },
+    { nombre: 'Limitacion fisica',     pct: 29.3 },
+    { nombre: 'Depresion',             pct: 19.9 },
   ],
   hay_datos: false,
 }
@@ -34,7 +36,6 @@ const RIESGO_COLORS = {
 
 /* ── Distribucion Riesgo ── */
 function RiesgoPanel({ data, isMock }) {
-  const total = data.reduce((a, b) => a + b.n, 0) || 1
   return (
     <section className="panel">
       <div className="panel-head">
@@ -166,8 +167,10 @@ function PacamPanel({ filters = {} }) {
   const [total, setTotal] = useState(0)
   const [isMock, setIsMock] = useState(true)
 
+  const params = filtersToParams(filters)
+
   useEffect(() => {
-    getMotivosNoRetiro({ region: filters.region }).then(({ data, error }) => {
+    getMotivosNoRetiro(params).then(({ data, error }) => {
       if (!error && data && data.total > 0) {
         setMotivos(data.motivos)
         setTotal(data.total)
@@ -178,7 +181,8 @@ function PacamPanel({ filters = {} }) {
         setIsMock(true)
       }
     })
-  }, [filters.region])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(params)])
 
   const circ = 2 * Math.PI * 40
   let offset = 0
@@ -234,7 +238,7 @@ function PacamPanel({ filters = {} }) {
 }
 
 /* ── RSH Distribution ── */
-function RSHPanel({ rshData, riesgoData, isMock }) {
+function RSHPanel({ rshData, isMock }) {
   // Usar distribucion de riesgo para construir barras apiladas por nivel
   const colors = [
     RIESGO_COLORS.critico,
@@ -304,8 +308,10 @@ export default function StatsPanel({ filters = {} }) {
   const [stats, setStats] = useState(null)
   const [isMock, setIsMock] = useState(false)
 
+  const params = filtersToParams(filters)
+
   useEffect(() => {
-    getStats({ region: filters.region }).then(({ data, error }) => {
+    getStats(params).then(({ data, error }) => {
       if (error || !data || !data.hay_datos) {
         setStats(MOCK_STATS)
         setIsMock(true)
@@ -314,7 +320,8 @@ export default function StatsPanel({ filters = {} }) {
         setIsMock(false)
       }
     })
-  }, [filters.region])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(params)])
 
   const s = stats || MOCK_STATS
 
@@ -324,7 +331,7 @@ export default function StatsPanel({ filters = {} }) {
       <InseguridadPanel data={s.distribucion_inseguridad} isMock={isMock} />
       <ComorbilidadesPanel data={s.comorbilidades}        isMock={isMock} />
       <PacamPanel filters={filters} />
-      <RSHPanel rshData={s.distribucion_rsh} riesgoData={s.distribucion_riesgo} isMock={isMock} />
+      <RSHPanel rshData={s.distribucion_rsh} isMock={isMock} />
     </div>
   )
 }

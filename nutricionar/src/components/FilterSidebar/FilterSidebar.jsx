@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import './FilterSidebar.css'
 
 const gruposOpts = ['65–74', '75–84', '85+']
 const sexosOpts  = ['Mujer', 'Hombre']
 const indicadoresOpts = [
   { label: 'Riesgo compuesto',        hint: 'ML' },
-  { label: 'Categoría MNA',           hint: 'ENS' },
+  { label: 'Riesgo IPRN',             hint: 'IPRN' },
   { label: 'Inseguridad alim. (FIES)',hint: 'CASEN' },
   { label: 'Adherencia PACAM',        hint: 'JUNAEB' },
   { label: 'IMC',                     hint: 'ENS' },
@@ -40,8 +40,23 @@ function toApiFilters(state) {
     nivelRiesgo: state.riesgos.size === 1
       ? riesgosOpts.find(r => state.riesgos.has(r.label))?.api
       : undefined,
+    // Conjunto completo de niveles activos (el mapa filtra client-side):
+    // [] = ninguno seleccionado → sin burbujas; undefined = todos → sin filtro.
+    nivelesRiesgo: state.riesgos.size === 0
+      ? []
+      : state.riesgos.size === riesgosOpts.length
+        ? undefined
+        : [...state.riesgos].map(r =>
+            riesgosOpts.find(o => o.label === r)?.api).filter(Boolean),
     sexos:       [...state.sexos].map(s => s === 'Mujer' ? 'F' : 'M'),
     grupos:      [...state.grupos],
+    // PACAM → valores que entiende el backend. 'Sin cobertura' aún no tiene
+    // soporte en la API, por lo que solo se mapean los dos primeros.
+    pacam: state.pacam.size === 1 && state.pacam.has('Solo beneficiarios')
+      ? 'beneficiarios'
+      : state.pacam.size === 1 && state.pacam.has('No-retiradores')
+        ? 'no_beneficiarios'
+        : undefined,
     indicador:   indicadoresOpts[state.indicador]?.label,
   }
 }
@@ -87,7 +102,7 @@ export default function FilterSidebar({ onFiltersChange }) {
             <span className="filter-badge">{activeCount}</span>
           )}
         </h3>
-        <button className="reset-btn" onClick={reset}>↺ limpiar</button>
+        <button className="reset-btn" onClick={reset}>Limpiar</button>
       </div>
 
       {/* Región */}

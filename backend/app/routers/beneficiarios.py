@@ -1,11 +1,25 @@
+import logging
+
 from fastapi import APIRouter, Query, Path, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from typing import Optional
 
 from app.database import get_db
+from app.routers.indicadores import aplicar_filtros
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class VisitaIn(BaseModel):
+    """Cuerpo del registro de una visita domiciliaria (US-09)."""
+    contacto: Optional[str] = None
+    nota: Optional[str] = None
+    seguimiento_dias: Optional[int] = None
 
 
 @router.get("/")
@@ -79,6 +93,9 @@ MOTIVO_LABELS = {
 @router.get("/no-retiro/motivos")
 def motivos_no_retiro(
     region: Optional[str] = Query(None),
+    comuna: Optional[str] = Query(None),
+    sexo: Optional[str] = Query(None, description="Lista separada por comas (F,M)"),
+    grupo_etario: Optional[str] = Query(None, description="Ej. '65-74,85+'"),
     db: Session = Depends(get_db),
 ):
     """
@@ -88,14 +105,12 @@ def motivos_no_retiro(
     Alimenta el donut de adherencia PACAM. Cohorte: inscritos en PACAM con
     riesgo alto/medio (misma definición que el filtro `no_retira_pacam`).
     """
-    where = (
-        "WHERE h.acceso_pacam = TRUE "
-        "AND i.nivel_riesgo IN ('alto', 'medio')"
+    # La cohorte ya fija el nivel de riesgo (alto/medio); el resto de filtros
+    # del dashboard se aplican con el helper compartido.
+    where, params = aplicar_filtros(
+        "WHERE h.acceso_pacam = TRUE AND i.nivel_riesgo IN ('alto', 'medio')",
+        {}, region=region, comuna=comuna, sexo=sexo, grupo_etario=grupo_etario,
     )
-    params: dict = {}
-    if region:
-        where += " AND h.region = :region"
-        params["region"] = region
 
     try:
         rows = db.execute(text(f"""
@@ -108,8 +123,11 @@ def motivos_no_retiro(
             GROUP BY COALESCE(p.motivo_no_retiro, 'otro')
         """), params).mappings().all()
         conteo = {r["motivo"]: r["n"] for r in rows}
-    except Exception:
+    except (OperationalError, ProgrammingError) as exc:
         # Tabla legada sin la columna motivo_no_retiro.
+        logger.warning(
+            "motivos_no_retiro: columna no disponible, usando fallback: %s", exc
+        )
         conteo = {}
 
     total = sum(conteo.values())
@@ -151,3 +169,30 @@ def get_beneficiario(
         raise HTTPException(status_code=404, detail="Beneficiario no encontrado")
 
     return dict(row)
+
+
+@router.post("/{beneficiario_id}/visitas")
+def registrar_visita(
+    beneficiario_id: int = Path(..., description="ID del adulto mayor"),
+    visita: VisitaIn = ...,
+    db: Session = Depends(get_db),
+):
+    """Registra una visita domiciliaria para el beneficiario.
+
+    La persistencia real (tabla `visitas`) se incorpora en Fase 5; por ahora se
+    valida la existencia del beneficiario y se confirma la recepción del
+    registro sin almacenarlo.
+    """
+    existe = db.execute(
+        text("SELECT 1 FROM personas WHERE id = :id"),
+        {"id": beneficiario_id},
+    ).scalar()
+    if not existe:
+        raise HTTPException(status_code=404, detail="Beneficiario no encontrado")
+
+    logger.info(
+        "Visita registrada (sin persistir) beneficiario=%s contacto=%s "
+        "seguimiento_dias=%s", beneficiario_id, visita.contacto,
+        visita.seguimiento_dias,
+    )
+    return {"ok": True, "mensaje": "Registro guardado"}

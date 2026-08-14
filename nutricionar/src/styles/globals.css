@@ -200,3 +200,38 @@ input:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* Estilos de impresión / exportación a PDF (window.print).
+   Oculta los controles interactivos para producir un documento limpio. */
+@media print {
+  .skip-link,
+  .topbar-right,
+  .filters,
+  .panel-actions,
+  .prediction-panel,
+  .reset-btn,
+  .search-box,
+  .table-footer {
+    display: none !important;
+  }
+
+  .topbar {
+    position: static;
+    border-bottom: 2px solid #000;
+  }
+
+  .dash-layout {
+    display: block;
+  }
+
+  .panel,
+  .card,
+  .kpi {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+}

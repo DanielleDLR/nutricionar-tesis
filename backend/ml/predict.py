@@ -50,58 +50,91 @@ def _load_model():
 
 def _heuristic_predict(record: dict) -> tuple:
     """
-    Prediccion heuristica de fallback basada en reglas clinicas MNA.
-    Se usa cuando el modelo .pkl no esta disponible.
+    Prediccion heuristica de fallback basada en el IPRN (Indice Proxy de
+    Riesgo Nutricional). Replica la formula del generador sintetico para
+    mantener coherencia con el modelo entrenado. Se usa cuando el modelo
+    .pkl no esta disponible.
+
+    Nota: puntaje_mna NO se usa — no esta disponible en fuentes de datos
+    reales (ENS 2017, CASEN 2022). Ver ml/features.py y la metodologia IPRN.
     """
     score = 0.0
     factors = []
 
-    imc = float(record.get("imc") or 24)
-    mna = float(record.get("puntaje_mna") or 22)
+    imc = float(record.get("imc") or 24.5)
+    pant = float(record.get("circ_pantorrilla") or 33.0)
     inseg = record.get("inseg_alimentaria", 0)
     if isinstance(inseg, str):
         inseg = {"severo": 3, "moderado": 2, "leve": 1}.get(inseg, 0)
+    edad = float(record.get("edad") or 72)
+    movilidad = record.get("movilidad", 1)
+    if isinstance(movilidad, str):
+        movilidad = {"cama": 0, "interior": 1, "sale": 2}.get(movilidad, 1)
 
-    if mna < 17:
-        score += 0.4
-        factors.append("puntaje_mna_bajo")
-    elif mna < 24:
-        score += 0.2
-        factors.append("puntaje_mna_riesgo")
-
+    # Item MNA-SF 6: IMC / circunferencia de pantorrilla
     if imc < 18.5:
-        score += 0.2
+        score += 0.30
         factors.append("imc_bajo_peso")
     elif imc < 22:
-        score += 0.1
-        factors.append("imc_limite")
+        score += 0.18
+        factors.append("imc_limite_am")
 
+    if pant < 31:
+        score += 0.22
+        factors.append("circ_pantorrilla_baja")
+
+    # Items MNA-SF 1+2: ingesta / perdida de peso
     if inseg >= 3:
-        score += 0.15
+        score += 0.22
         factors.append("inseg_alimentaria_severa")
     elif inseg >= 2:
-        score += 0.07
+        score += 0.11
+        factors.append("inseg_alimentaria_moderada")
 
-    for key, label in [
-        ("depresion", "depresion"),
-        ("limitacion_fisica", "limitacion_fisica"),
-        ("diabetes", "diabetes"),
-    ]:
-        if record.get(key):
-            score += 0.05
-            factors.append(label)
+    if record.get("perdio_peso"):
+        score += 0.16
+        factors.append("perdio_peso")
 
+    # Items MNA-SF 4+5: salud psicologica
+    if record.get("depresion"):
+        score += 0.12
+        factors.append("depresion")
+
+    # Item MNA-SF 3: movilidad
+    if movilidad == 0:
+        score += 0.14
+        factors.append("movilidad_reducida")
+
+    if record.get("limitacion_fisica"):
+        score += 0.08
+        factors.append("limitacion_fisica")
+
+    # Factores contextuales (RSH/FPS, CASEN 2022)
     if record.get("vive_solo"):
-        score += 0.05
+        score += 0.07
         factors.append("vive_solo")
+
+    if edad > 85:
+        score += 0.09
+        factors.append("edad_avanzada")
+    elif edad > 75:
+        score += 0.05
+
+    # Comorbilidades (ENS 2017)
+    if record.get("diabetes"):
+        score += 0.06
+        factors.append("diabetes")
+    if record.get("hta"):
+        score += 0.03
 
     score = min(1.0, score)
 
-    if score >= 0.55:
+    # Umbrales calibrados por percentiles IPRN (p17=0.22, p50=0.42, p83=0.62)
+    if score >= 0.62:
         nivel = "critico"
-    elif score >= 0.35:
+    elif score >= 0.42:
         nivel = "alto"
-    elif score >= 0.15:
+    elif score >= 0.22:
         nivel = "medio"
     else:
         nivel = "bajo"
@@ -149,7 +182,7 @@ def predict(record: dict) -> tuple:
         top_idx = np.argsort(contribution)[::-1][:5]
         factors = [FEATURE_NAMES[i] for i in top_idx if contribution[i] > 0.0]
     except Exception:
-        factors = ["imc", "puntaje_mna", "inseg_alimentaria"]
+        factors = ["circ_pantorrilla", "imc", "inseg_alimentaria"]
 
     return nivel, round(prob, 4), factors, probs_all
 

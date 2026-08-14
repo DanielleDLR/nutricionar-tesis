@@ -1,8 +1,11 @@
 """
 Router: /api/v1/prediccion
 ===========================
-Exposición del modelo ML de árbol de decisión para predicción de riesgo
-nutricional en adultos mayores de la Región del Maule.
+Exposicion del modelo ML para prediccion de riesgo nutricional en adultos
+mayores de la Region del Maule.
+
+Modelo principal  : RandomForestClassifier (n_estimators=150, max_depth=10)
+Modelo baseline   : DecisionTreeClassifier (max_depth=8)
 """
 
 from typing import List, Optional
@@ -31,14 +34,13 @@ class BeneficiarioInput(BaseModel):
     )
     hacinamiento: Optional[bool] = Field(False)
 
-    # Antropometría / estado nutricional
-    imc: Optional[float] = Field(None, description="Índice de masa corporal")
+    # Antropometria / estado nutricional
+    imc: Optional[float] = Field(None, description="Indice de masa corporal")
     circ_pantorrilla: Optional[float] = Field(
         None, description="Circunferencia de pantorrilla (cm)"
     )
-    puntaje_mna: Optional[float] = Field(
-        None, ge=0, le=30, description="Puntaje MNA (0-30)"
-    )
+    # puntaje_mna eliminado: no disponible en ENS 2017 / fuentes reales.
+    # La clasificacion se basa en el IPRN (ver ml/features.py).
     perdio_peso: Optional[bool] = Field(
         False, description="Perdio peso en los ultimos 3 meses"
     )
@@ -66,7 +68,7 @@ class BeneficiarioInput(BaseModel):
                 "sexo": "F",
                 "zona": "rural",
                 "imc": 20.5,
-                "puntaje_mna": 19,
+                "circ_pantorrilla": 29.5,
                 "diabetes": True,
                 "depresion": True,
                 "inseg_alimentaria": 2,

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nutricionar-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "nutricionar", "run", "dev"],
+      "port": 5173
+    }
+  ]
+}

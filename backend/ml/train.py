@@ -1,8 +1,15 @@
 """
 train.py — Entrenamiento del modelo de riesgo nutricional
 ==========================================================
-Entrena un DecisionTreeClassifier y un RandomForestClassifier sobre el
-dataset sintético Maule y guarda los artefactos en ml/artefactos/.
+Entrena el modelo principal (RandomForestClassifier) y el baseline de
+comparacion (DecisionTreeClassifier) sobre el dataset sintetico Maule,
+y guarda los artefactos en ml/artefactos/.
+
+La evaluacion usa validacion cruzada estratificada de 5 pliegues. Todas las
+metricas de desempeno (F1-macro, matriz de confusion y metricas por clase)
+se calculan sobre predicciones de validacion cruzada (cross_val_predict),
+NO sobre el conjunto de entrenamiento, para evitar estimaciones optimistas
+por sobreajuste.
 
 Uso:
     python -m ml.train --file data/dataset_sintetico_maule.xlsx
@@ -19,7 +26,11 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.model_selection import (
+    StratifiedKFold,
+    cross_val_predict,
+    cross_val_score,
+)
 from sklearn.tree import DecisionTreeClassifier
 
 from ml.features import (
@@ -65,9 +76,9 @@ def entrenar(excel_path: str, evaluar: bool = True) -> dict:
 
     print("Construyendo matriz de features...")
     X, y = build_training_matrix(df_p, df_n, df_i, df_a)
-    print(f"  → X: {X.shape}, y: {y.value_counts().to_dict()}")
+    print(f"  -> X: {X.shape}, y: {y.value_counts().to_dict()}")
 
-    # ── Árbol de decisión ────────────────────────────────────────
+    # -- Arbol de decision (baseline) -----------------------------
     print("\nEntrenando DecisionTree...")
     dt = DecisionTreeClassifier(
         max_depth=8,
@@ -79,7 +90,7 @@ def entrenar(excel_path: str, evaluar: bool = True) -> dict:
     dt_acc = dt.score(X, y)
     print(f"  Train accuracy: {dt_acc:.3f}")
 
-    # ── Random Forest (modelo principal) ─────────────────────────
+    # -- Random Forest (modelo principal) -------------------------
     print("\nEntrenando RandomForest...")
     rf = RandomForestClassifier(
         n_estimators=150,
@@ -93,31 +104,54 @@ def entrenar(excel_path: str, evaluar: bool = True) -> dict:
     rf_acc = rf.score(X, y)
     print(f"  Train accuracy: {rf_acc:.3f}")
 
-    # ── Validación cruzada ───────────────────────────────────────
+    # -- Validacion cruzada ---------------------------------------
+    # Validacion cruzada estratificada de 5 pliegues: la estratificacion
+    # preserva la distribucion de clases en cada pliegue (necesario por el
+    # desbalance). Las metricas por clase y la matriz de confusion se calculan
+    # con cross_val_predict (out-of-fold), no sobre el set de entrenamiento.
     metrics = {}
+    labels = sorted(y.unique())
+    label_names = [NIVEL_RIESGO_INV[l] for l in labels]
+    metrics["label_names"] = label_names
+
     if evaluar:
-        print("\nValidación cruzada (5-fold, RandomForest)...")
         cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-        scores = cross_val_score(rf, X, y, cv=cv, scoring="f1_macro")
-        metrics["cv_f1_macro_mean"] = round(float(scores.mean()), 4)
-        metrics["cv_f1_macro_std"]  = round(float(scores.std()), 4)
-        print(
-            f"  F1-macro: {scores.mean():.3f} ± {scores.std():.3f}"
+
+        print("\nValidacion cruzada (5-fold)...")
+        # F1-macro por pliegue — modelo principal y baseline
+        rf_scores = cross_val_score(rf, X, y, cv=cv, scoring="f1_macro")
+        dt_scores = cross_val_score(dt, X, y, cv=cv, scoring="f1_macro")
+        metrics["cv_f1_macro_mean"] = round(float(rf_scores.mean()), 4)
+        metrics["cv_f1_macro_std"] = round(float(rf_scores.std()), 4)
+        metrics["cv_f1_macro_per_fold"] = [round(float(s), 4) for s in rf_scores]
+        metrics["dt_cv_f1_macro_mean"] = round(float(dt_scores.mean()), 4)
+        metrics["dt_cv_f1_macro_per_fold"] = [round(float(s), 4) for s in dt_scores]
+        print(f"  RF F1-macro: {rf_scores.mean():.4f} +/- {rf_scores.std():.4f}")
+        print(f"  DT F1-macro: {dt_scores.mean():.4f} (baseline)")
+
+        # Predicciones out-of-fold para metricas honestas por clase
+        y_cv = cross_val_predict(rf, X, y, cv=cv)
+        metrics["cv_accuracy"] = round(float((y_cv == y).mean()), 4)
+
+        report_cv = classification_report(
+            y, y_cv, labels=labels, target_names=label_names,
+            output_dict=True, zero_division=0,
         )
-
-        y_pred = rf.predict(X)
-        labels = sorted(y.unique())
-        label_names = [NIVEL_RIESGO_INV[l] for l in labels]
-        print("\nClassification report (train set):")
-        print(classification_report(
-            y, y_pred, labels=labels, target_names=label_names
-        ))
+        metrics["classification_report_cv"] = report_cv
         metrics["confusion_matrix"] = confusion_matrix(
-            y, y_pred, labels=labels
+            y, y_cv, labels=labels
         ).tolist()
-        metrics["label_names"] = label_names
+        # Matriz de confusion sobre entrenamiento (solo referencia)
+        metrics["confusion_matrix_train"] = confusion_matrix(
+            y, rf.predict(X), labels=labels
+        ).tolist()
 
-    # ── Importancia de features ──────────────────────────────────
+        print("\nClassification report (validacion cruzada):")
+        print(classification_report(
+            y, y_cv, labels=labels, target_names=label_names, zero_division=0
+        ))
+
+    # -- Importancia de features ----------------------------------
     fi = pd.Series(rf.feature_importances_, index=FEATURE_NAMES)
     fi_top = fi.nlargest(10)
     print("\nTop 10 features (RandomForest):")
@@ -133,7 +167,7 @@ def entrenar(excel_path: str, evaluar: bool = True) -> dict:
     }
     metrics["medians"] = MEDIANS
 
-    # ── Guardar artefactos ───────────────────────────────────────
+    # -- Guardar artefactos ---------------------------------------
     print("\nGuardando artefactos...")
     save_artefact(rf, "modelo_rf.pkl")
     save_artefact(dt, "modelo_dt.pkl")
@@ -145,7 +179,7 @@ def entrenar(excel_path: str, evaluar: bool = True) -> dict:
         json.dump(metrics, f, indent=2, default=str)
     print(f"  Guardado: {metrics_path}")
 
-    print("\n✓ Entrenamiento completado.")
+    print("\nEntrenamiento completado.")
     return metrics
 
 
@@ -155,7 +189,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--file", required=True, help="Ruta al Excel del dataset")
     parser.add_argument(
-        "--eval", action="store_true", help="Realizar validación cruzada"
+        "--eval", action="store_true", help="Realizar validacion cruzada"
     )
     args = parser.parse_args()
 
