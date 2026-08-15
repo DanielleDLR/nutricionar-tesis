@@ -60,7 +60,11 @@ jobs:
 
       - name: Instalar dependencias
         working-directory: nutricionar
-        run: npm install
+        # Reinstalación limpia para evitar un lockfile o node_modules corrupto
+        # que rompe Rollup/esbuild en GitHub Actions
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
 
       - name: Build de producción
         working-directory: nutricionar
