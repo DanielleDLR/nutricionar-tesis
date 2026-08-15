@@ -88,7 +88,7 @@ def test_prediccion_info(client):
     data = response.json()
     assert "modelo_disponible" in data
     assert "n_features" in data
-    assert data["n_features"] == 18
+    assert data["n_features"] == 17
 
 
 def test_indicadores_stats(client):
