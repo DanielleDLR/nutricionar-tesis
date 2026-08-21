@@ -1,0 +1,80 @@
+{
+  "cv_f1_macro_mean": 0.6841022320345024,
+  "cv_f1_macro_std": 0.08678402958261162,
+  "dt_train_accuracy": 0.9078498293515358,
+  "rf_train_accuracy": 1.0,
+  "n_samples": 293,
+  "k_folds": 3,
+  "class_distribution": {
+    "0": 198,
+    "1": 52,
+    "2": 29,
+    "3": 14
+  },
+  "confusion_matrix": [
+    [
+      196,
+      2,
+      0,
+      0
+    ],
+    [
+      26,
+      25,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      25,
+      4
+    ],
+    [
+      0,
+      0,
+      9,
+      5
+    ]
+  ],
+  "classification_report": {
+    "bajo": {
+      "precision": 0.8828828828828829,
+      "recall": 0.98989898989899,
+      "f1-score": 0.9333333333333333,
+      "support": 198.0
+    },
+    "medio": {
+      "precision": 0.9259259259259259,
+      "recall": 0.4807692307692308,
+      "f1-score": 0.6329113924050633,
+      "support": 52.0
+    },
+    "alto": {
+      "precision": 0.7142857142857143,
+      "recall": 0.8620689655172413,
+      "f1-score": 0.78125,
+      "support": 29.0
+    },
+    "critico": {
+      "precision": 0.5555555555555556,
+      "recall": 0.35714285714285715,
+      "f1-score": 0.43478260869565216,
+      "support": 14.0
+    },
+    "accuracy": 0.856655290102389,
+    "macro avg": {
+      "precision": 0.7696625196625198,
+      "recall": 0.6724700108320798,
+      "f1-score": 0.6955693336085123,
+      "support": 293.0
+    },
+    "weighted avg": {
+      "precision": 0.8581946158737968,
+      "recall": 0.856655290102389,
+      "f1-score": 0.8411419758593939,
+      "support": 293.0
+    }
+  },
+  "fuente": "CASEN 2022 + ENS 2016-2017, emparejamiento estadistico, Region del Maule 60+, etiquetas IPRN-proxy"
+}

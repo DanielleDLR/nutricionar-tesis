@@ -1,0 +1,154 @@
+{
+  "label_names": [
+    "bajo",
+    "medio",
+    "alto",
+    "critico"
+  ],
+  "cv_f1_macro_mean": 0.7351,
+  "cv_f1_macro_std": 0.0294,
+  "cv_f1_macro_per_fold": [
+    0.6813,
+    0.7632,
+    0.729,
+    0.7581,
+    0.7441
+  ],
+  "dt_cv_f1_macro_mean": 0.6589,
+  "dt_cv_f1_macro_per_fold": [
+    0.6215,
+    0.6517,
+    0.6629,
+    0.6699,
+    0.6886
+  ],
+  "cv_accuracy": 0.73,
+  "classification_report_cv": {
+    "bajo": {
+      "precision": 0.7765567765567766,
+      "recall": 0.7969924812030075,
+      "f1-score": 0.7866419294990723,
+      "support": 266.0
+    },
+    "medio": {
+      "precision": 0.7204030226700252,
+      "recall": 0.7114427860696517,
+      "f1-score": 0.7158948685857321,
+      "support": 402.0
+    },
+    "alto": {
+      "precision": 0.6897590361445783,
+      "recall": 0.6876876876876877,
+      "f1-score": 0.6887218045112782,
+      "support": 333.0
+    },
+    "critico": {
+      "precision": 0.7525252525252525,
+      "recall": 0.7487437185929648,
+      "f1-score": 0.7506297229219143,
+      "support": 199.0
+    },
+    "accuracy": 0.73,
+    "macro avg": {
+      "precision": 0.7348110219741582,
+      "recall": 0.7362166683883279,
+      "f1-score": 0.7354720813794993,
+      "support": 1200.0
+    },
+    "weighted avg": {
+      "precision": 0.729673668305102,
+      "recall": 0.73,
+      "f1-score": 0.7297968051516117,
+      "support": 1200.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      212,
+      54,
+      0,
+      0
+    ],
+    [
+      61,
+      286,
+      54,
+      1
+    ],
+    [
+      0,
+      56,
+      229,
+      48
+    ],
+    [
+      0,
+      1,
+      49,
+      149
+    ]
+  ],
+  "confusion_matrix_train": [
+    [
+      252,
+      14,
+      0,
+      0
+    ],
+    [
+      23,
+      340,
+      39,
+      0
+    ],
+    [
+      0,
+      27,
+      298,
+      8
+    ],
+    [
+      0,
+      0,
+      6,
+      193
+    ]
+  ],
+  "feature_importances": {
+    "edad": 0.05746480019846208,
+    "sexo_num": 0.009448286700160607,
+    "zona_num": 0.005520833368121893,
+    "ingreso_per_capita": 0.04160535332475311,
+    "num_carencias": 0.051709502409756386,
+    "hacinamiento": 0.007474271164617888,
+    "imc": 0.07292506528877969,
+    "circ_pantorrilla": 0.07734614280472296,
+    "puntaje_mna": 0.3789104587296619,
+    "perdio_peso": 0.07204700641580893,
+    "diabetes": 0.010113828056326364,
+    "hta": 0.008332213907925767,
+    "depresion": 0.045904407737557336,
+    "limitacion_fisica": 0.03247596990346025,
+    "inseg_alimentaria": 0.07327491160455943,
+    "acceso_pacam": 0.006968517795518755,
+    "movilidad_num": 0.02536009532979718,
+    "vive_solo": 0.023118335260009552
+  },
+  "dt_train_accuracy": 0.7925,
+  "rf_train_accuracy": 0.9025,
+  "n_samples": 1200,
+  "class_distribution": {
+    "medio": 402,
+    "alto": 333,
+    "bajo": 266,
+    "critico": 199
+  },
+  "medians": {
+    "edad": 78.0,
+    "ingreso_per_capita": 258257.0,
+    "imc": 25.3,
+    "circ_pantorrilla": 32.4,
+    "num_carencias": 2.0,
+    "puntaje_mna": 24.2
+  }
+}

@@ -1,0 +1,86 @@
+name: CI — NutricioNar
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ─────────────────────────────────────
+  # Backend: lint + tests
+  # ─────────────────────────────────────
+  backend:
+    name: Backend (Python/FastAPI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Lint con flake8
+        working-directory: backend
+        run: |
+          flake8 app/ tests/ \
+            --max-line-length=100 \
+            --exclude=__pycache__,.venv
+
+      - name: Tests con pytest
+        working-directory: backend
+        run: pytest tests/ -v --tb=short
+
+  # ─────────────────────────────────────
+  # Frontend: build
+  # ─────────────────────────────────────
+  frontend:
+    name: Frontend (React/Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: nutricionar/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: nutricionar
+        # Reinstalación limpia para evitar un lockfile o node_modules corrupto
+        # que rompe Rollup/esbuild en GitHub Actions
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+
+      - name: Build de producción
+        working-directory: nutricionar
+        run: npm run build
+
+  # ─────────────────────────────────────
+  # Docker: verificar que compose levanta
+  # ─────────────────────────────────────
+  docker:
+    name: Docker Compose Check
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Verificar docker-compose.yml
+        run: docker compose config

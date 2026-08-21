@@ -1,0 +1,329 @@
+/* ── PredictionPanel ────────────────────────────────────────── */
+.prediction-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.prediction-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface-raised, #faf9f6);
+  border-bottom: 1px solid var(--border);
+}
+
+.prediction-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: var(--font-ui, sans-serif);
+}
+
+.prediction-title small {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-family: var(--mono, monospace);
+}
+
+.prediction-icon {
+  font-size: 16px;
+}
+
+.prediction-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.prediction-body {
+  padding: 20px;
+}
+
+/* ── Form ── */
+.pred-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 900px) {
+  .pred-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .pred-grid { grid-template-columns: 1fr; }
+}
+
+.pred-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pred-fieldset legend {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  padding: 0 4px;
+  font-family: var(--mono, monospace);
+}
+
+.pred-fieldset label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-family: var(--mono, monospace);
+}
+
+.pred-fieldset input[type="number"],
+.pred-fieldset select {
+  background: var(--bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--ink);
+  font-family: var(--mono, monospace);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pred-fieldset input:focus,
+.pred-fieldset select:focus {
+  outline: none;
+  border-color: var(--accent, #1F4E58);
+  box-shadow: 0 0 0 2px rgba(31,78,88,0.12);
+}
+
+.pred-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  cursor: pointer;
+  font-size: 12px !important;
+  color: var(--ink) !important;
+}
+
+.pred-check input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent, #1F4E58);
+}
+
+/* ── Actions ── */
+.pred-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.btn-predict {
+  background: var(--accent, #1F4E58);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: var(--font-ui, sans-serif);
+}
+.btn-predict:hover { opacity: 0.88; }
+.btn-predict:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-reset {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 9px 16px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: var(--font-ui, sans-serif);
+}
+.btn-reset:hover { background: var(--surface-raised, #f5f3ef); }
+
+/* ── Error ── */
+.pred-error {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 5px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #856404;
+  font-family: var(--mono, monospace);
+}
+
+/* ── Result card ── */
+.pred-result {
+  border: 2px solid;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.result-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  color: #fff;
+}
+
+.result-icon {
+  font-size: 20px;
+}
+
+.result-label {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--font-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.result-details {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Prob bar */
+.result-prob {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prob-label {
+  font-size: 11px;
+  font-family: var(--mono, monospace);
+  color: var(--ink-soft);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.prob-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.prob-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.prob-value {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--mono, monospace);
+  width: 36px;
+  text-align: right;
+}
+
+/* Factors */
+.factors-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  font-family: var(--mono, monospace);
+  margin-bottom: 6px;
+}
+
+.factors-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.factor-chip {
+  font-size: 11px;
+  font-family: var(--mono, monospace);
+  background: var(--surface-raised, #f5f3ef);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+  color: var(--ink);
+}
+
+/* All probabilities */
+.result-probs-all {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.prob-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prob-nivel {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono, monospace);
+  width: 56px;
+  flex-shrink: 0;
+  text-transform: capitalize;
+}
+
+.prob-mini-bar {
+  flex: 1;
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.prob-mini-bar > div {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.prob-mini-val {
+  font-size: 11px;
+  font-family: var(--mono, monospace);
+  color: var(--ink-soft);
+  width: 30px;
+  text-align: right;
+}
+
+/* Fallback notice */
+.fallback-notice {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-family: var(--mono, monospace);
+  font-style: italic;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
