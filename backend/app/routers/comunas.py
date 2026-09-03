@@ -80,7 +80,7 @@ def listar_comunas(
         None, description="'65-74', '75-84', '85+' (coma = OR)"
     ),
     pacam: Optional[str] = Query(
-        None, description="'beneficiarios' o 'no_beneficiarios'"
+        None, description="'beneficiarios', 'no_retiradores' o 'sin_cobertura'"
     ),
     db: Session = Depends(get_db),
 ):

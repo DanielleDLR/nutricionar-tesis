@@ -53,7 +53,9 @@ def aplicar_filtros(where, params, *, region=None, comuna=None,
         params["nivel_riesgo"] = nivel_riesgo
     if pacam == "beneficiarios":
         where += " AND h.acceso_pacam = TRUE"
-    elif pacam == "no_beneficiarios":
+    elif pacam == "no_retiradores":
+        where += " AND h.acceso_pacam = TRUE AND p.motivo_no_retiro IS NOT NULL"
+    elif pacam in ("sin_cobertura", "no_beneficiarios"):
         where += " AND h.acceso_pacam = FALSE"
     if sexo:
         sexos = [s.strip().upper() for s in sexo.split(",") if s.strip()]
@@ -116,11 +118,12 @@ def get_resumen_nacional(
     nivel_riesgo: Optional[str] = Query(None),
     sexo: Optional[str] = Query(None, description="Lista separada por comas (F,M)"),
     grupo_etario: Optional[str] = Query(None, description="Ej. '65-74,85+'"),
+    pacam: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """Totales de indicadores nutricionales, filtrables y cacheados por TTL."""
     cache_key = "indicadores:resumen:" + _clave_filtros(
-        region, comuna, nivel_riesgo, sexo, grupo_etario
+        region, comuna, nivel_riesgo, sexo, grupo_etario, pacam
     )
     cached = cache_get(cache_key)
     if cached is not None:
@@ -129,6 +132,7 @@ def get_resumen_nacional(
     where, params = aplicar_filtros(
         "WHERE 1=1", {}, region=region, comuna=comuna,
         nivel_riesgo=nivel_riesgo, sexo=sexo, grupo_etario=grupo_etario,
+        pacam=pacam,
     )
     sql = f"""
         SELECT
@@ -163,7 +167,7 @@ def get_stats(
     sexo: Optional[str] = Query(None, description="Lista separada por comas (F,M)"),
     grupo_etario: Optional[str] = Query(None, description="Ej. '65-74,85+'"),
     pacam: Optional[str] = Query(
-        None, description="'beneficiarios' o 'no_beneficiarios'"
+        None, description="'beneficiarios', 'no_retiradores' o 'sin_cobertura'"
     ),
     db: Session = Depends(get_db),
 ):

@@ -65,7 +65,14 @@ export function filtersToParams(filters = {}) {
   if (filters.comuna) p.comuna = filters.comuna
   if (filters.nivelRiesgo) p.nivel_riesgo = filters.nivelRiesgo
   if (filters.sexos?.length) p.sexo = [...filters.sexos].sort().join(',')
-  if (filters.grupos?.length) p.grupo_etario = [...filters.grupos].sort().join(',')
+  if (filters.grupos?.length) {
+    // El sidebar usa guiones tipográficos para las etiquetas visibles; la
+    // API recibe el rango normalizado, por ejemplo: 65-74.
+    p.grupo_etario = [...filters.grupos]
+      .map(grupo => grupo.replace(/[–—]/g, '-'))
+      .sort()
+      .join(',')
+  }
   if (filters.pacam?.length) {
     p.pacam = Array.isArray(filters.pacam)
       ? [...filters.pacam].sort().join(',')

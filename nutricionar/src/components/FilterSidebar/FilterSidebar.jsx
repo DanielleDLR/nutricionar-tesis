@@ -50,13 +50,14 @@ function toApiFilters(state) {
             riesgosOpts.find(o => o.label === r)?.api).filter(Boolean),
     sexos:       [...state.sexos].map(s => s === 'Mujer' ? 'F' : 'M'),
     grupos:      [...state.grupos],
-    // PACAM → valores que entiende el backend. 'Sin cobertura' aún no tiene
-    // soporte en la API, por lo que solo se mapean los dos primeros.
+    // PACAM → valores que entiende el backend.
     pacam: state.pacam.size === 1 && state.pacam.has('Solo beneficiarios')
       ? 'beneficiarios'
       : state.pacam.size === 1 && state.pacam.has('No-retiradores')
-        ? 'no_beneficiarios'
-        : undefined,
+        ? 'no_retiradores'
+        : state.pacam.size === 1 && state.pacam.has('Sin cobertura')
+          ? 'sin_cobertura'
+          : undefined,
     indicador:   indicadoresOpts[state.indicador]?.label,
   }
 }

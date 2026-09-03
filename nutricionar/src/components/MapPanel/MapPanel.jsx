@@ -122,8 +122,14 @@ export default function MapPanel({ filters = {} }) {
     let cancelled = false
 
     async function load() {
-      // Ningún nivel seleccionado → sin burbujas, sin necesidad de consultar.
-      if (Array.isArray(filters.nivelesRiesgo) && filters.nivelesRiesgo.length === 0) {
+      // Un conjunto vacío significa que no hay personas que mostrar. Evita
+      // consultar la API sin filtros, cuyo contrato interpreta el parámetro
+      // ausente como "todos".
+      if (
+        (Array.isArray(filters.nivelesRiesgo) && filters.nivelesRiesgo.length === 0) ||
+        (Array.isArray(filters.sexos) && filters.sexos.length === 0) ||
+        (Array.isArray(filters.grupos) && filters.grupos.length === 0)
+      ) {
         setComunas([])
         setSelected(null)
         setLoading(false)
@@ -219,12 +225,9 @@ export default function MapPanel({ filters = {} }) {
       attributionControl: false,
     }).setView([-35.5, -71.7], 8)
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}@2x.png', {
-      maxZoom: 18, subdomains: 'abcd',
-    }).addTo(map)
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png', {
-      maxZoom: 18, subdomains: 'abcd',
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
 
     layerGroupRef.current = L.layerGroup().addTo(map)
