@@ -93,7 +93,7 @@ export default function PredictionPanel() {
       <div className="prediction-header" onClick={() => setOpen(o => !o)}>
         <div className="prediction-title">
           Evaluación de riesgo individual
-          <small>modelo RandomForest · 17 variables</small>
+          <small>modelo RandomForest · 18 variables</small>
         </div>
         <button className="prediction-toggle" aria-label="Expandir/Colapsar">
           {open ? '−' : '+'}

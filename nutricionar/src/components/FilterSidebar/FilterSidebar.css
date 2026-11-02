@@ -129,6 +129,16 @@
   font-family: var(--mono); font-size: 10px; color: var(--ink-mute);
   margin-left: auto;
 }
+.fuente-nota {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: rgba(200, 150, 40, 0.08);
+  border-left: 2px solid var(--amber, #c89628);
+  border-radius: 2px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
 
 .applied-summary {
   background: white;

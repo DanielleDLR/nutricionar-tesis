@@ -1,10 +1,10 @@
 # NutricioNar — Plataforma Predictiva de Riesgo de Desnutrición en Adultos Mayores (Chile)
 
-> Tesis de Magíster · Daniela Lavanderos · 2025–2026
+> Proyecto de Título · Ingeniería Civil Informática · Daniela Lavanderos · 2026
 
 ## Descripción
 
-NutricioNar es una plataforma web interactiva que permite visualizar y predecir el riesgo de desnutrición en adultos mayores en Chile, a partir de datos de la Encuesta CASEN 2022, ENS 2016-2017 y registros del MINSAL. El proyecto pilota en las regiones de O'Higgins y el Maule.
+NutricioNar es una plataforma web interactiva que permite visualizar y predecir el riesgo de desnutrición en adultos mayores en Chile, a partir de datos de la Encuesta CASEN 2022, ENS 2016-2017 y registros del MINSAL. El piloto se desarrolla en la Región del Maule.
 
 ## Stack tecnológico
 

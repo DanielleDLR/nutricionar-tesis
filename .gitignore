@@ -89,3 +89,9 @@ backend/ml/artefactos/metrics.json
 !backend/ml/artefactos/medians.pkl
 !backend/ml/artefactos/feature_names.pkl
 !backend/ml/artefactos/metrics.json
+
+# ─────────────────────────────────────────
+# Archivos locales de herramientas
+# ─────────────────────────────────────────
+.claude/settings.local.json
+Claude outputs/

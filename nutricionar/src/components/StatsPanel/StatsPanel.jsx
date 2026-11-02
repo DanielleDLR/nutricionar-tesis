@@ -199,7 +199,7 @@ function PacamPanel({ filters = {} }) {
       <div className="panel-head">
         <div className="panel-title">
           Adherencia PACAM
-          <small>motivos de no retiro · JUNAEB</small>
+          <small>motivos de no retiro · APS</small>
         </div>
         {isMock && <span className="mock-badge">referencia</span>}
       </div>

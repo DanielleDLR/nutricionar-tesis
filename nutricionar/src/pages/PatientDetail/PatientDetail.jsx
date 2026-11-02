@@ -250,7 +250,7 @@ export default function PatientDetail() {
   if (loading) {
     return (
       <div className="page-detail">
-        <TopBar subtitle="Vista detalle · Operador JUNAEB" />
+        <TopBar subtitle="Vista detalle · Equipo APS" />
         <div style={{ padding: 60, textAlign: 'center', color: 'var(--ink-soft)', fontFamily: 'var(--mono)' }}>
           Cargando perfil…
         </div>
@@ -260,7 +260,7 @@ export default function PatientDetail() {
 
   return (
     <div className="page-detail">
-      <TopBar subtitle="Vista detalle · Operador JUNAEB" />
+      <TopBar subtitle="Vista detalle · Equipo APS" />
 
       <div className="profile-layout">
         <aside className="profile-sidebar">

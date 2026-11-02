@@ -7,7 +7,7 @@ const indicadoresOpts = [
   { label: 'Riesgo compuesto',        hint: 'ML' },
   { label: 'Riesgo IPRN',             hint: 'IPRN' },
   { label: 'Inseguridad alim. (FIES)',hint: 'CASEN' },
-  { label: 'Adherencia PACAM',        hint: 'JUNAEB' },
+  { label: 'Adherencia PACAM',        hint: 'APS' },
   { label: 'IMC',                     hint: 'ENS' },
 ]
 const riesgosOpts = [
@@ -17,6 +17,10 @@ const riesgosOpts = [
   { label: 'Bajo',    cls: 'bajo',    api: 'bajo' },
 ]
 const pacamOpts = ['Solo beneficiarios', 'No-retiradores', 'Sin cobertura']
+const fuenteOpts = [
+  { label: 'Sintético (piloto)', api: 'SINTETICO' },
+  { label: 'Real — Maule (preliminar)', api: 'CASEN_ENS_REAL' },
+]
 
 const DEFAULT_STATE = {
   region:     '07',
@@ -26,6 +30,7 @@ const DEFAULT_STATE = {
   riesgos:    new Set(['Crítico','Alto']),
   pacam:      new Set(['No-retiradores']),
   indicador:  0,
+  fuente:     0,
 }
 
 /**
@@ -59,6 +64,7 @@ function toApiFilters(state) {
           ? 'sin_cobertura'
           : undefined,
     indicador:   indicadoresOpts[state.indicador]?.label,
+    fuente:      fuenteOpts[state.fuente]?.api,
   }
 }
 
@@ -104,6 +110,32 @@ export default function FilterSidebar({ onFiltersChange }) {
           )}
         </h3>
         <button className="reset-btn" onClick={reset}>Limpiar</button>
+      </div>
+
+      {/* Fuente de datos */}
+      <div className="filter-group">
+        <label>Fuente de datos</label>
+        <div className="radio-group">
+          {fuenteOpts.map((f, i) => (
+            <div
+              key={f.label}
+              className={`radio-row ${state.fuente === i ? 'active' : ''}`}
+              onClick={() => set('fuente', i)}
+            >
+              <span className="radio-dot"></span>
+              <span>{f.label}</span>
+            </div>
+          ))}
+        </div>
+        {state.fuente === 1 && (
+          <p className="fuente-nota">
+            Piloto preliminar (N=3.352, CASEN 2022 + ENS 2016-2017). La comuna
+            es una estimación ponderada por población censal, no un dato
+            observado. Sin factores de expansión muestral — no representa a
+            la población, solo a la muestra encuestada. Ver sección 7.5 de
+            la memoria.
+          </p>
+        )}
       </div>
 
       {/* Región */}
@@ -217,7 +249,7 @@ export default function FilterSidebar({ onFiltersChange }) {
       </div>
 
       <div className="applied-summary">
-        Región <strong>Maule</strong>{state.comuna && ` · ${state.comuna}`}
+        {fuenteOpts[state.fuente]?.label} · Región <strong>Maule</strong>{state.comuna && ` · ${state.comuna}`}
         <br/>
         {state.riesgos.size} nivel(es) de riesgo activos
       </div>

@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS personas (
     motivo_no_retiro            VARCHAR(20),
 
     -- Metadatos
-    fuente                      VARCHAR(20)     CHECK (fuente IN ('CASEN', 'ENS', 'SINTETICO')),
+    fuente                      VARCHAR(20)     CHECK (fuente IN ('CASEN', 'ENS', 'SINTETICO', 'CASEN_ENS_REAL')),
     anio_encuesta               SMALLINT
 );
 
@@ -72,7 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_personas_fuente   ON personas(fuente);
 CREATE TABLE IF NOT EXISTS indicadores_nutricionales (
     id                      SERIAL PRIMARY KEY,
     persona_id              INTEGER         NOT NULL REFERENCES personas(id) ON DELETE CASCADE,
-    nivel_riesgo            VARCHAR(10)     NOT NULL CHECK (nivel_riesgo IN ('alto', 'medio', 'bajo')),
+    nivel_riesgo            VARCHAR(10)     NOT NULL CHECK (nivel_riesgo IN ('critico', 'alto', 'medio', 'bajo')),
     probabilidad_riesgo     NUMERIC(5, 4)   CHECK (probabilidad_riesgo BETWEEN 0 AND 1),
     estado_nutricional      VARCHAR(20),
     riesgo_sarcopenia       VARCHAR(10),
@@ -111,7 +111,12 @@ CREATE TABLE IF NOT EXISTS comunas_resumen (
     n_critico               INTEGER         DEFAULT 0,
     n_alto                  INTEGER         DEFAULT 0,
     pct_riesgo_alto_crit    NUMERIC(5,2)    DEFAULT 0.0,
-    nivel_riesgo_zona       VARCHAR(20)
+    nivel_riesgo_zona       VARCHAR(20),
+    -- Vigilancia Nutricional REM P5 (MINSAL) — registro administrativo
+    -- oficial de personas mayores en control (indicadores 7.3/7.4).
+    n_control_rem           INTEGER,
+    pct_normal_rem          NUMERIC(5,2),
+    pct_bajo_peso_rem       NUMERIC(5,2)
 );
 
 CREATE INDEX IF NOT EXISTS idx_comunas_region_cod ON comunas_resumen(region_cod);
@@ -125,6 +130,7 @@ SELECT
     h.zona,
     COUNT(DISTINCT p.id)                                    AS total_adultos_mayores,
     ROUND(AVG(p.imc)::NUMERIC, 2)                          AS imc_promedio,
+    ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'critico' THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_riesgo_critico,
     ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'alto'  THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_riesgo_alto,
     ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'medio' THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_riesgo_medio,
     ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'bajo'  THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_riesgo_bajo,

@@ -329,6 +329,14 @@ export default function MapPanel({ filters = {} }) {
                     : '4,5%'}
                 </span>
               </div>
+              {sel.data?.pct_bajo_peso_rem != null && (
+                <div className="stat-row">
+                  <span className="k" title="Registro oficial REM P5 (MINSAL) — personas mayores en control, no la muestra del modelo">
+                    Bajo peso REM (oficial)
+                  </span>
+                  <span className="v">{sel.data.pct_bajo_peso_rem.toFixed(1)}%</span>
+                </div>
+              )}
               <div className="stat-row">
                 <span className="k">Inseg. alim. severa</span>
                 <span className="v">

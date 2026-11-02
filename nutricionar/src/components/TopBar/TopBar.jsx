@@ -99,7 +99,7 @@ export default function TopBar({
 
       escribir('NOTAS METODOLÓGICAS', { size: 12, bold: true, dy: 8 })
       const nota =
-        'Modelo: RandomForestClassifier · 18 variables · F1-macro 0.74. ' +
+        'Modelo: RandomForestClassifier · 18 variables · F1-macro 0.7537. ' +
         'Datos: dataset sintético piloto calibrado con ESSALCAVI 2024, ' +
         'CASEN 2022, ENS 2017. Los resultados son apoyo a la decisión y no ' +
         'reemplazan evaluación clínica profesional.'
@@ -120,7 +120,7 @@ export default function TopBar({
         <div className="brand-mark">N</div>
         <div className="brand-text">
           <div className="b1">Nutricionar</div>
-          <div className="b2">{subtitle || 'MINSAL · JUNAEB · Plataforma Predictiva'}</div>
+          <div className="b2">{subtitle || 'MINSAL · APS · Plataforma Predictiva'}</div>
         </div>
       </div>
 

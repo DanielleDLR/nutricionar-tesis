@@ -78,6 +78,7 @@ export function filtersToParams(filters = {}) {
       ? [...filters.pacam].sort().join(',')
       : filters.pacam
   }
+  if (filters.fuente) p.fuente = filters.fuente
   return p
 }
 

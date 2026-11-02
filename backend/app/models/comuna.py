@@ -26,3 +26,9 @@ class ComunaResumen(Base):
     n_alto = Column(Integer, default=0)
     pct_riesgo_alto_crit = Column(Float, default=0.0)
     nivel_riesgo_zona = Column(String(20), nullable=True)
+
+    # Vigilancia Nutricional REM P5 (MINSAL) — registro administrativo oficial
+    # de personas mayores bajo control, no la muestra CASEN/ENS/sintética.
+    n_control_rem = Column(Integer, nullable=True)
+    pct_normal_rem = Column(Float, nullable=True)
+    pct_bajo_peso_rem = Column(Float, nullable=True)

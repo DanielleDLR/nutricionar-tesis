@@ -4,7 +4,7 @@ Router: /api/v1/prediccion
 Exposicion del modelo ML para prediccion de riesgo nutricional en adultos
 mayores de la Region del Maule.
 
-Modelo principal  : RandomForestClassifier (n_estimators=150, max_depth=10)
+Modelo principal  : RandomForestClassifier (n_estimators=150, max_depth=12, min_samples_leaf=3)
 Modelo baseline   : DecisionTreeClassifier (max_depth=8)
 """
 

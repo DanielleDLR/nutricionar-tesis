@@ -36,11 +36,13 @@ def _rango_etario(g: str):
 
 def aplicar_filtros(where, params, *, region=None, comuna=None,
                     nivel_riesgo=None, sexo=None, grupo_etario=None,
-                    pacam=None):
+                    pacam=None, fuente=None):
     """Agrega condiciones WHERE comunes a las consultas del dashboard.
 
     Asume los alias estándar: hogares=h, personas=p, indicadores=i. El filtro
     por nivel de riesgo exige que la consulta una la tabla de indicadores.
+    `fuente` filtra por el origen del dato en personas.fuente (ej. 'SINTETICO',
+    'CASEN_ENS_REAL'); admite múltiples valores separados por coma.
     """
     if region:
         where += " AND h.region = :region"
@@ -51,6 +53,13 @@ def aplicar_filtros(where, params, *, region=None, comuna=None,
     if nivel_riesgo:
         where += " AND i.nivel_riesgo = :nivel_riesgo"
         params["nivel_riesgo"] = nivel_riesgo
+    if fuente:
+        fuentes = [f.strip().upper() for f in fuente.split(",") if f.strip()]
+        if fuentes:
+            marks = ", ".join(f":fuente{k}" for k in range(len(fuentes)))
+            where += f" AND p.fuente IN ({marks})"
+            for k, f in enumerate(fuentes):
+                params[f"fuente{k}"] = f
     if pacam == "beneficiarios":
         where += " AND h.acceso_pacam = TRUE"
     elif pacam == "no_retiradores":
@@ -84,10 +93,10 @@ def aplicar_filtros(where, params, *, region=None, comuna=None,
     return where, params
 
 
-def _clave_filtros(region, comuna, nivel_riesgo, sexo, grupo_etario, pacam=None):
+def _clave_filtros(region, comuna, nivel_riesgo, sexo, grupo_etario, pacam=None, fuente=None):
     """Sufijo determinista para las claves de caché según los filtros activos."""
     return "|".join(str(x or "") for x in
-                    (region, comuna, nivel_riesgo, sexo, grupo_etario, pacam))
+                    (region, comuna, nivel_riesgo, sexo, grupo_etario, pacam, fuente))
 
 
 @router.get("/")
@@ -118,12 +127,17 @@ def get_resumen_nacional(
     nivel_riesgo: Optional[str] = Query(None),
     sexo: Optional[str] = Query(None, description="Lista separada por comas (F,M)"),
     grupo_etario: Optional[str] = Query(None, description="Ej. '65-74,85+'"),
-    pacam: Optional[str] = Query(None),
+    pacam: Optional[str] = Query(
+        None, description="'beneficiarios', 'no_retiradores' o 'sin_cobertura'"
+    ),
+    fuente: Optional[str] = Query(
+        None, description="'SINTETICO', 'CASEN_ENS_REAL' o ambos separados por coma"
+    ),
     db: Session = Depends(get_db),
 ):
     """Totales de indicadores nutricionales, filtrables y cacheados por TTL."""
     cache_key = "indicadores:resumen:" + _clave_filtros(
-        region, comuna, nivel_riesgo, sexo, grupo_etario, pacam
+        region, comuna, nivel_riesgo, sexo, grupo_etario, pacam, fuente
     )
     cached = cache_get(cache_key)
     if cached is not None:
@@ -132,11 +146,13 @@ def get_resumen_nacional(
     where, params = aplicar_filtros(
         "WHERE 1=1", {}, region=region, comuna=comuna,
         nivel_riesgo=nivel_riesgo, sexo=sexo, grupo_etario=grupo_etario,
-        pacam=pacam,
+        pacam=pacam, fuente=fuente,
     )
     sql = f"""
         SELECT
             COUNT(DISTINCT p.id) AS total_adultos_mayores,
+            ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'critico'
+                THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_riesgo_critico,
             ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'alto'
                 THEN 1 ELSE 0 END) / COUNT(p.id), 2) AS pct_riesgo_alto,
             ROUND(100.0 * SUM(CASE WHEN i.nivel_riesgo = 'medio'
@@ -169,6 +185,9 @@ def get_stats(
     pacam: Optional[str] = Query(
         None, description="'beneficiarios', 'no_retiradores' o 'sin_cobertura'"
     ),
+    fuente: Optional[str] = Query(
+        None, description="'SINTETICO', 'CASEN_ENS_REAL' o ambos separados por coma"
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -177,7 +196,7 @@ def get_stats(
              comorbilidades, distribucion_quintil.
     """
     cache_key = "indicadores:stats:" + _clave_filtros(
-        region, comuna, nivel_riesgo, sexo, grupo_etario, pacam
+        region, comuna, nivel_riesgo, sexo, grupo_etario, pacam, fuente
     )
     cached = cache_get(cache_key)
     if cached is not None:
@@ -188,7 +207,7 @@ def get_stats(
     where, params = aplicar_filtros(
         "WHERE 1=1", {}, region=region, comuna=comuna,
         nivel_riesgo=nivel_riesgo, sexo=sexo, grupo_etario=grupo_etario,
-        pacam=pacam,
+        pacam=pacam, fuente=fuente,
     )
 
     # Distribucion nivel de riesgo
@@ -200,7 +219,8 @@ def get_stats(
         {where}
         GROUP BY i.nivel_riesgo
         ORDER BY CASE i.nivel_riesgo
-            WHEN 'alto' THEN 0 WHEN 'medio' THEN 1 WHEN 'bajo' THEN 2 END
+            WHEN 'critico' THEN 0 WHEN 'alto' THEN 1
+            WHEN 'medio' THEN 2 WHEN 'bajo' THEN 3 END
     """
     riesgo_rows = db.execute(text(sql_riesgo), params).mappings().all()
 

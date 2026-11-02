@@ -61,13 +61,13 @@ export default function Dashboard() {
             <strong>Fuente de datos:</strong> dataset sintetico piloto basado
             en distribuciones de ESSALCAVI 2024 (INTa Universidad de Chile),
             CASEN 2022 (Ministerio de Desarrollo Social), ENS 2017 (MINSAL),
-            RSH y JUNAEB. Las visualizaciones incorporan datos del backend
+            RSH y registros PACAM de atencion primaria. Las visualizaciones incorporan datos del backend
             cuando esta disponible; en caso contrario muestran la muestra
             sintetica calibrada.
             <br/><br/>
             <strong>Modelo predictivo:</strong> RandomForestClassifier
             (scikit-learn) entrenado sobre 18 variables, 1.200 registros.
-            F1-macro CV 5-fold: 0.813. Variable objetivo: nivel_riesgo (4 clases).
+            F1-macro CV 5-fold: 0.7537. Variable objetivo: nivel_riesgo (4 clases).
           </div>
         </main>
       </div>

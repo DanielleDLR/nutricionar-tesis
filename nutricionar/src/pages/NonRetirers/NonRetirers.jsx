@@ -138,7 +138,7 @@ export default function NonRetirers() {
 
   return (
     <div className="page-list">
-      <TopBar subtitle="Gestion de terreno · Operador JUNAEB" />
+      <TopBar subtitle="Gestion de terreno · Equipo APS" />
 
       <div className="ops-layout">
         <div className="ops-header">
